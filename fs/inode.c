@@ -204,7 +204,9 @@ static struct inode *alloc_inode(struct super_block *sb)
 	struct inode *inode;
 
 	if (sb->s_op->alloc_inode)
-		inode = sb->s_op->alloc_inode(sb);
+		//sockfs_ops 
+		//对于sockfs_ops在sock_init函数中初始化
+		inode = sb->s_op->alloc_inode(sb);//调用超级块对应的inode分配函数,即sock_alloc_inode
 	else
 		inode = kmem_cache_alloc(inode_cachep, GFP_KERNEL);
 
@@ -886,6 +888,7 @@ EXPORT_SYMBOL(get_next_ino);
  */
 struct inode *new_inode_pseudo(struct super_block *sb)
 {
+    //最终调用sock_alloc_inode
 	struct inode *inode = alloc_inode(sb);
 
 	if (inode) {

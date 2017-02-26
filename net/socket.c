@@ -246,7 +246,8 @@ static struct inode *sock_alloc_inode(struct super_block *sb)
 {
 	struct socket_alloc *ei;
 	struct socket_wq *wq;
-
+	
+    //sock_inode_cachep就是类型kmem_cache的对象
 	ei = kmem_cache_alloc(sock_inode_cachep, GFP_KERNEL);
 	if (!ei)
 		return NULL;
@@ -410,7 +411,7 @@ struct file *sock_alloc_file(struct socket *sock, int flags, const char *dname)
 	path.dentry = d_alloc_pseudo(sock_mnt->mnt_sb, &name);
 	if (unlikely(!path.dentry))
 		return ERR_PTR(-ENOMEM);
-	path.mnt = mntget(sock_mnt);
+	path.mnt = mntget(sock_mnt);//定义在372行的,vfsmount类型
 
 	d_instantiate(path.dentry, SOCK_INODE(sock));
 
@@ -550,6 +551,15 @@ struct socket *sock_alloc(void)
 	struct inode *inode;
 	struct socket *sock;
 
+    //这里new一个inode,最终调用超级块对应的inode分配函数  
+    
+    //sock_init函数中会注册sock_fs_type文件系统,其中的
+    
+    //定义在372行的,vfsmount类型
+    
+    //初始化在sock_init函数
+
+	 //最终调用sock_alloc_inode
 	inode = new_inode_pseudo(sock_mnt->mnt_sb);
 	if (!inode)
 		return NULL;
@@ -1151,7 +1161,14 @@ int __sock_create(struct net *net, int family, int type, int protocol,
 #endif
 
 	rcu_read_lock();
-	pf = rcu_dereference(net_families[family]);//获得对应协议族的操作块-----------3  
+	//获得对应协议族的操作块-->为的是下面create操作-->3  
+
+    //net_families为net_proto_family类型的数组
+    
+    //net_families数组在函数sock_register中被初始化
+    
+    //其中tcp/ip协议族的在inet_init中调用sock_register
+	pf = rcu_dereference(net_families[family]);
 	err = -EAFNOSUPPORT;
 	if (!pf)
 		goto out_release;
@@ -1165,10 +1182,15 @@ int __sock_create(struct net *net, int family, int type, int protocol,
 
 	/* Now protected by module ref count */
 	rcu_read_unlock();
+	
+	//对于网络协议族调用的是tcp/ip协议族的inet_create函数
 
-	err = pf->create(net, sock, protocol, kern);//----------构造sock对象，然后挂到socket对象上---> //inet_create------4  
+	//pf指向inet_family_ops对象,类型为net_proto_family
+
+	err = pf->create(net, sock, protocol, kern);//----------构造sock对象，然后挂到socket对象上------4  
 	if (err < 0)
 		goto out_module_put;
+	
 
 	/*
 	 * Now to bump the refcnt of the [loadable] module that owns this
@@ -1215,7 +1237,7 @@ int sock_create_kern(struct net *net, int family, int type, int protocol, struct
 	return __sock_create(net, family, type, protocol, res, 1);
 }
 EXPORT_SYMBOL(sock_create_kern);
-socket()
+//socket()
 SYSCALL_DEFINE3(socket, int, family, int, type, int, protocol)
 {
 	int retval;
@@ -1235,8 +1257,10 @@ SYSCALL_DEFINE3(socket, int, family, int, type, int, protocol)
 
 	if (SOCK_NONBLOCK != O_NONBLOCK && (flags & SOCK_NONBLOCK))
 		flags = (flags & ~SOCK_NONBLOCK) | O_NONBLOCK;
-
-	retval = sock_create(family, type, protocol, &sock);//构造特殊socket文件(其实还有inode，先不探究)  
+	//创建套接字参数涉及到协议族,套接字类型(流式,数据报,原生)
+	
+    //       fd = socket(AF_INET,SOCK_DGRAM,0);  
+	retval = sock_create(family, type, protocol, &sock);//构造特殊socket文件(其实所谓的创建文件就是创建inode，先不探究)  
 	if (retval < 0)
 		goto out;
 
@@ -2506,18 +2530,42 @@ static int __init sock_init(void)
 	/*
 	 *      Initialize skbuff SLAB cache
 	 */
+	 
+	//初始化skb_buff SLAB cache
 	skb_init();
 
 	/*
 	 *      Initialize the protocols module.
 	 */
 
+    //创建Slab缓存,分配单元大小为sizeof(struct socket_alloc)
 	init_inodecache();
 
 	err = register_filesystem(&sock_fs_type);
 	if (err)
 		goto out_fs;
-	sock_mnt = kern_mount(&sock_fs_type);
+	
+	
+	//kern_mount实质为namespace.c的kern_mount_data函数
+
+	//最终调用的是vfs_kern_mount函数
+
+	//对于每一个 mount 的文件系统，都由一个 vfsmount 结构来表示。对于每一个目录项，都用一个dentry来表示
+
+	//sock_mnt是个vfsmount对象
+	
+	/*************************************************************************************************************************************************************/
+
+	//mount的过程就是把设备的文件系统加入到 vfs 框架中
+
+	//1. 首先，要mount一个新的设备，需要创建一个新的 super block。 这通过要mount的文件系统的 file_system_type， 调用其 get_sb 方法来创建一个新的 super block。
+
+	//2. 需要创建一个新的vfsmount ，对于任何一个 mount 的文件系统，都要有一个 vfsmount， 创建这个vfsmount， 并设置好vfsmount 中的各个成员
+
+	//3. 将创建好的 vfsmount 加入到系统中。
+	/*************************************************************************************************************************************************************/
+	
+	sock_mnt = kern_mount(&sock_fs_type);//定义在372行的,vfsmount类型
 	if (IS_ERR(sock_mnt)) {
 		err = PTR_ERR(sock_mnt);
 		goto out_mount;

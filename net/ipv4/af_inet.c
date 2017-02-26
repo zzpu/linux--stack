@@ -244,9 +244,9 @@ EXPORT_SYMBOL(inet_listen);
 static int inet_create(struct net *net, struct socket *sock, int protocol,
 		       int kern)
 {
-	struct sock *sk;
-	struct inet_protosw *answer;
-	struct inet_sock *inet;
+	struct sock *sk;               //INET地址族为上层提供的一个抽象  
+	struct inet_protosw *answer;   //协议的socket接口  
+	struct inet_sock *inet;        //代表INET地址族的 socket  
 	struct proto *answer_prot;
 	unsigned char answer_flags;
 	int try_loading_module = 0;
@@ -261,6 +261,11 @@ static int inet_create(struct net *net, struct socket *sock, int protocol,
 lookup_protocol:
 	err = -ESOCKTNOSUPPORT;
 	rcu_read_lock();
+	//inetsw是个指针数组,初始化在inet_register_protosw
+	
+	//第一个成员指向SOCK_STREAM流式套接字类型的协议链表
+	//第二个成员指向SOCK_DGRAM数据报类型协议的链表
+	//第三个成员指向SOCK_RAW原始套接字类型协议的链表
 	list_for_each_entry_rcu(answer, &inetsw[sock->type], list) {
 
 		err = 0;
@@ -307,8 +312,11 @@ lookup_protocol:
 	    !ns_capable(net->user_ns, CAP_NET_RAW))
 		goto out_rcu_unlock;
 
+    //特定协议的操作函数集，声明在net.h  
 	sock->ops = answer->ops;
+	//INET层协议描述块 
 	answer_prot = answer->prot;
+	
 	answer_flags = answer->flags;
 	rcu_read_unlock();
 
@@ -1760,20 +1768,21 @@ static int __init inet_init(void)
 	int rc = -EINVAL;
 
 	sock_skb_cb_check_size(sizeof(struct inet_skb_parm));
-
-	rc = proto_register(&tcp_prot, 1);
+	
+	//将协议挂到全局proto_list,创建slab  
+	rc = proto_register(&tcp_prot, 1);//1代表分配slab缓存  
 	if (rc)
 		goto out;
 
-	rc = proto_register(&udp_prot, 1);
+	rc = proto_register(&udp_prot, 1);//1代表分配slab缓存  
 	if (rc)
 		goto out_unregister_tcp_proto;
 
-	rc = proto_register(&raw_prot, 1);
+	rc = proto_register(&raw_prot, 1);//1代表分配slab缓存  
 	if (rc)
 		goto out_unregister_udp_proto;
 
-	rc = proto_register(&ping_prot, 1);
+	rc = proto_register(&ping_prot, 1);//1代表分配slab缓存  
 	if (rc)
 		goto out_unregister_raw_proto;
 
