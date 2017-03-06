@@ -1835,6 +1835,7 @@ static inline __u32 cookie_init_sequence(const struct tcp_request_sock_ops *ops,
 
 int tcpv4_offload_init(void);
 
+// µœ÷‘⁄tcp_ipv4.c
 void tcp_v4_init(void);
 void tcp_init(void);
 

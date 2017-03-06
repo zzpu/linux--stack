@@ -2359,6 +2359,8 @@ void tcp4_proc_exit(void)
 }
 #endif /* CONFIG_PROC_FS */
 
+
+//slab在inet_init中调用proto_register时建立
 struct proto tcp_prot = {
 	.name			= "TCP",
 	.owner			= THIS_MODULE,

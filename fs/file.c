@@ -618,6 +618,8 @@ void __fd_install(struct files_struct *files, unsigned int fd,
 	smp_rmb();
 	fdt = rcu_dereference_sched(files->fdt);
 	BUG_ON(fdt->fd[fd] != NULL);
+	
+	//fdt->fd[fd]Ö¸ÏòfileÄÚ´æ
 	rcu_assign_pointer(fdt->fd[fd], file);
 	rcu_read_unlock_sched();
 }

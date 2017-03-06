@@ -1321,7 +1321,8 @@ static struct sock *sk_prot_alloc(struct proto *prot, gfp_t priority,
 {
 	struct sock *sk;
 	struct kmem_cache *slab;
-
+	
+    //对于tcp, tcp_prot
 	slab = prot->slab;
 	if (slab != NULL) {
 		sk = kmem_cache_alloc(slab, priority & ~__GFP_ZERO);
@@ -1386,6 +1387,7 @@ struct sock *sk_alloc(struct net *net, int family, gfp_t priority,
 {
 	struct sock *sk;
 
+    //对于tcp, tcp_prot
 	sk = sk_prot_alloc(prot, priority | __GFP_ZERO, family);
 	if (sk) {
 		sk->sk_family = family;

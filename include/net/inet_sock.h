@@ -184,12 +184,12 @@ struct inet_sock {
 #define inet_daddr		sk.__sk_common.skc_daddr
 #define inet_rcv_saddr		sk.__sk_common.skc_rcv_saddr
 #define inet_dport		sk.__sk_common.skc_dport
-#define inet_num		sk.__sk_common.skc_num
+#define inet_num		sk.__sk_common.skc_num            //主机字节序表示的源端口号  
 
 	__be32			inet_saddr;
 	__s16			uc_ttl;
 	__u16			cmsg_flags;
-	__be16			inet_sport;
+	__be16			inet_sport;                         //网络字字节序表示的端口号  
 	__u16			inet_id;
 
 	struct ip_options_rcu __rcu	*inet_opt;

@@ -912,6 +912,8 @@ static int compat_raw_ioctl(struct sock *sk, unsigned int cmd, unsigned long arg
 }
 #endif
 
+//slab在inet_init中调用proto_register时建立
+
 struct proto raw_prot = {
 	.name		   = "RAW",
 	.owner		   = THIS_MODULE,

@@ -2210,6 +2210,9 @@ int udp_abort(struct sock *sk, int err)
 }
 EXPORT_SYMBOL_GPL(udp_abort);
 
+
+//slab在inet_init中调用proto_register时建立
+
 struct proto udp_prot = {
 	.name		   = "UDP",
 	.owner		   = THIS_MODULE,

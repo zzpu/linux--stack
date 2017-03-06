@@ -415,6 +415,7 @@ struct file *sock_alloc_file(struct socket *sock, int flags, const char *dname)
 
 	d_instantiate(path.dentry, SOCK_INODE(sock));
 
+    //从filp_cachep中获得一个file对象
 	file = alloc_file(&path, FMODE_READ | FMODE_WRITE,
 		  &socket_file_ops);
 	if (IS_ERR(file)) {
@@ -434,12 +435,16 @@ EXPORT_SYMBOL(sock_alloc_file);
 static int sock_map_fd(struct socket *sock, int flags)
 {
 	struct file *newfile;
+	//分配文件描述符
 	int fd = get_unused_fd_flags(flags);
 	if (unlikely(fd < 0))
 		return fd;
-
+    //是个file对象
 	newfile = sock_alloc_file(sock, flags, NULL);
 	if (likely(!IS_ERR(newfile))) {
+		//将file按安装到调用进程
+		
+		//本质上是以文件描述符为下标,file为值,填充文件描述符数组fd_array
 		fd_install(fd, newfile);
 		return fd;
 	}
@@ -563,7 +568,8 @@ struct socket *sock_alloc(void)
 	inode = new_inode_pseudo(sock_mnt->mnt_sb);
 	if (!inode)
 		return NULL;
-
+	
+    //根据一个结构体变量中的一个域成员变量的指针来获取指向整个结构体变量的指针
 	sock = SOCKET_I(inode);
 
 	kmemcheck_annotate_bitfield(sock, type);
@@ -1139,7 +1145,14 @@ int __sock_create(struct net *net, int family, int type, int protocol,
 	 *	the protocol is 0, the family is instructed to select an appropriate
 	 *	default.
 	 */
-	sock = sock_alloc();//创建socket_alloc类型的inode --------1  
+
+	//是从slab中创建的,在init_inodecache函数中分配单元大小为sizeof(struct socket_alloc)
+	
+	//init_inodecache时已经指定了分配单位为socket_alloc的大小
+
+	//socket_alloc包含一个socket和一个inode,sock_alloc将其socket返回
+	
+	sock = sock_alloc();                                                //创建socket_alloc类型的inode ------------------1  
 	if (!sock) {
 		net_warn_ratelimited("socket: no more sockets\n");
 		return -ENFILE;	/* Not exactly a match, but its the
@@ -1147,7 +1160,8 @@ int __sock_create(struct net *net, int family, int type, int protocol,
 	}
 	
 	//常用的SOCK_STREAM,SOCK_DGRAM,SOCK_RAW等，还有Linux自有的SOCK_PACKET
-	sock->type = type;//设置套接字的类型----------------2  
+	
+	sock->type = type;                                                  //设置套接字的类型-------------------------------2  
 
 #ifdef CONFIG_MODULES
 	/* Attempt to load a protocol module if the find failed.
@@ -1161,14 +1175,14 @@ int __sock_create(struct net *net, int family, int type, int protocol,
 #endif
 
 	rcu_read_lock();
-	//获得对应协议族的操作块-->为的是下面create操作-->3  
+	
 
     //net_families为net_proto_family类型的数组
     
     //net_families数组在函数sock_register中被初始化
     
     //其中tcp/ip协议族的在inet_init中调用sock_register
-	pf = rcu_dereference(net_families[family]);
+	pf = rcu_dereference(net_families[family]);                          //获得对应协议族的操作块-->为的是下面create操作--3  
 	err = -EAFNOSUPPORT;
 	if (!pf)
 		goto out_release;
@@ -1187,7 +1201,10 @@ int __sock_create(struct net *net, int family, int type, int protocol,
 
 	//pf指向inet_family_ops对象,类型为net_proto_family
 
-	err = pf->create(net, sock, protocol, kern);//----------构造sock对象，然后挂到socket对象上------4  
+   //inet_create
+   //实质上就是用inetsw_array中套接字类型对应的协议相关对象填充socket对象
+   //并构建sock对象
+	err = pf->create(net, sock, protocol, kern);                          //构造sock对象，然后挂到socket对象上------------4  
 	if (err < 0)
 		goto out_module_put;
 	
@@ -1259,11 +1276,12 @@ SYSCALL_DEFINE3(socket, int, family, int, type, int, protocol)
 		flags = (flags & ~SOCK_NONBLOCK) | O_NONBLOCK;
 	//创建套接字参数涉及到协议族,套接字类型(流式,数据报,原生)
 	
-    //       fd = socket(AF_INET,SOCK_DGRAM,0);  
+    //   例子:fd = socket(AF_INET,SOCK_DGRAM,0);  
 	retval = sock_create(family, type, protocol, &sock);//构造特殊socket文件(其实所谓的创建文件就是创建inode，先不探究)  
 	if (retval < 0)
 		goto out;
 
+    //构造file对象,同时将socket对象挂到file对象的private_data成员
 	retval = sock_map_fd(sock, flags & (O_CLOEXEC | O_NONBLOCK));//分配文件描述符，构造file,并安装到调用进程  
 	if (retval < 0)
 		goto out_release;
@@ -1395,13 +1413,23 @@ SYSCALL_DEFINE3(bind, int, fd, struct sockaddr __user *, umyaddr, int, addrlen)
 	struct sockaddr_storage address;
 	int err, fput_needed;
 
+    //根据文件描述符获得file对象,然后从private_data成员获得socket对象
 	sock = sockfd_lookup_light(fd, &err, &fput_needed);
 	if (sock) {
+		//从用户空间拷贝地址信息到内核
 		err = move_addr_to_kernel(umyaddr, addrlen, &address);
 		if (err >= 0) {
 			err = security_socket_bind(sock,
 						   (struct sockaddr *)&address,
 						   addrlen);
+
+			//sock->ops在inet_create初始化
+			//在inetsw_array数组有套接字类型和协议的对应描述对象
+			
+			//对于流式套接字,sock->ops为inet_stream_ops
+			//sock->ops->bind为inet_bind
+
+			
 			if (!err)
 				err = sock->ops->bind(sock,
 						      (struct sockaddr *)

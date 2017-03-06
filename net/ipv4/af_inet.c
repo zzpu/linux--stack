@@ -261,11 +261,19 @@ static int inet_create(struct net *net, struct socket *sock, int protocol,
 lookup_protocol:
 	err = -ESOCKTNOSUPPORT;
 	rcu_read_lock();
+    //inet_init
+	
 	//inetsw是个指针数组,初始化在inet_register_protosw
 	
 	//第一个成员指向SOCK_STREAM流式套接字类型的协议链表
 	//第二个成员指向SOCK_DGRAM数据报类型协议的链表
 	//第三个成员指向SOCK_RAW原始套接字类型协议的链表
+
+	
+
+	//根据套接字类型sock->type得到协议的关联对象
+	//套接字类型与协议的关联对象数组定义在inetsw_array,inet_init函数中会加载到inetsw拉链表
+	//其实如果只有inet协议族,则这个链表只有一个对象
 	list_for_each_entry_rcu(answer, &inetsw[sock->type], list) {
 
 		err = 0;
@@ -311,10 +319,13 @@ lookup_protocol:
 	if (sock->type == SOCK_RAW && !kern &&
 	    !ns_capable(net->user_ns, CAP_NET_RAW))
 		goto out_rcu_unlock;
+	//inetsw_array
 
     //特定协议的操作函数集，声明在net.h  
+    //对于tcp: inet_stream_ops
 	sock->ops = answer->ops;
 	//INET层协议描述块 
+	//对于tcp, tcp_prot
 	answer_prot = answer->prot;
 	
 	answer_flags = answer->flags;
@@ -323,6 +334,7 @@ lookup_protocol:
 	WARN_ON(!answer_prot->slab);
 
 	err = -ENOBUFS;
+	//对于tcp, tcp_prot
 	sk = sk_alloc(net, PF_INET, GFP_KERNEL, answer_prot, kern);
 	if (!sk)
 		goto out;
@@ -348,7 +360,7 @@ lookup_protocol:
 		inet->pmtudisc = IP_PMTUDISC_WANT;
 
 	inet->inet_id = 0;
-
+    //
 	sock_init_data(sock, sk);
 
 	sk->sk_destruct	   = inet_sock_destruct;
@@ -438,6 +450,8 @@ int inet_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 	int err;
 
 	/* If the socket has its own bind function then use it. (RAW) */
+	
+    //对于tcp, tcp_prot
 	if (sk->sk_prot->bind) {
 		err = sk->sk_prot->bind(sk, uaddr, addr_len);
 		goto out;
@@ -1052,13 +1066,18 @@ void inet_register_protosw(struct inet_protosw *p)
 
 	/* If we are trying to override a permanent protocol, bail. */
 	last_perm = &inetsw[p->type];
+	
+	//实际是一个for循环，利用传入的指向list_head结构的指针作为循环变量，从链表头开始（并跳过链表头），逐项向后移动指针，直至又回到链表头
+	
 	list_for_each(lh, &inetsw[p->type]) {
+	    //获得链表头所在对象
 		answer = list_entry(lh, struct inet_protosw, list);
 		/* Check only the non-wild match. */
 		if ((INET_PROTOSW_PERMANENT & answer->flags) == 0)
 			break;
 		if (protocol == answer->protocol)
 			goto out_permanent;
+		//last_perm指向链表最后一个元素
 		last_perm = lh;
 	}
 
@@ -1770,6 +1789,7 @@ static int __init inet_init(void)
 	sock_skb_cb_check_size(sizeof(struct inet_skb_parm));
 	
 	//将协议挂到全局proto_list,创建slab  
+	//操作的是proto_list
 	rc = proto_register(&tcp_prot, 1);//1代表分配slab缓存  
 	if (rc)
 		goto out;
@@ -1790,6 +1810,8 @@ static int __init inet_init(void)
 	 *	Tell SOCKET that we are alive...
 	 */
 
+	//注册协议族操作函数集,操作的是net_families
+
 	(void)sock_register(&inet_family_ops);
 
 #ifdef CONFIG_SYSCTL
@@ -1799,6 +1821,8 @@ static int __init inet_init(void)
 	/*
 	 *	Add all the base protocols.
 	 */
+
+    //操作的是inet_protos
 
 	if (inet_add_protocol(&icmp_protocol, IPPROTO_ICMP) < 0)
 		pr_crit("%s: Cannot add ICMP protocol\n", __func__);
@@ -1815,6 +1839,11 @@ static int __init inet_init(void)
 	for (r = &inetsw[0]; r < &inetsw[SOCK_MAX]; ++r)
 		INIT_LIST_HEAD(r);
 
+    //操作的是inetsw
+    
+    //inetsw描述协议和套接字类型之间的关系,如TCP和流式套接字关联在一起
+
+	//inetsw是个指针数组,每个成员指向实现该类型套接字的协议链表头
 	for (q = inetsw_array; q < &inetsw_array[INETSW_ARRAY_LEN]; ++q)
 		inet_register_protosw(q);
 
@@ -1828,11 +1857,16 @@ static int __init inet_init(void)
 	 *	Set the IP module up
 	 */
 
+
 	ip_init();
 
+    //初始化tcp协议相关,包括slab
+    //实现在tcp_ipv4.c
 	tcp_v4_init();
 
 	/* Setup TCP slab cache for open requests. */
+	
+	//初始化slab
 	tcp_init();
 
 	/* Setup UDP memory threshold */

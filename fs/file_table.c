@@ -159,7 +159,7 @@ struct file *alloc_file(struct path *path, fmode_t mode,
 		const struct file_operations *fop)
 {
 	struct file *file;
-
+    //从filp_cachep中获得一个file对象
 	file = get_empty_filp();
 	if (IS_ERR(file))
 		return file;
