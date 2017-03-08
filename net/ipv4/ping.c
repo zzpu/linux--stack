@@ -992,6 +992,8 @@ bool ping_rcv(struct sk_buff *skb)
 }
 EXPORT_SYMBOL_GPL(ping_rcv);
 
+//slab在inet_init中调用proto_register时建立
+
 struct proto ping_prot = {
 	.name =		"PING",
 	.owner =	THIS_MODULE,

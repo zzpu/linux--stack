@@ -3284,6 +3284,7 @@ void __init tcp_init(void)
 
 	percpu_counter_init(&tcp_sockets_allocated, 0, GFP_KERNEL);
 	percpu_counter_init(&tcp_orphan_count, 0, GFP_KERNEL);
+	
 	tcp_hashinfo.bind_bucket_cachep =
 		kmem_cache_create("tcp_bind_bucket",
 				  sizeof(struct inet_bind_bucket), 0,
@@ -3309,6 +3310,9 @@ void __init tcp_init(void)
 
 	if (inet_ehash_locks_alloc(&tcp_hashinfo))
 		panic("TCP: failed to alloc ehash_locks");
+	//在inet_csk_get_port用到
+
+	//每一项都是一个链表，存储值相同的tcp_sock(这些sock可能是端口复用的)。
 	tcp_hashinfo.bhash =
 		alloc_large_system_hash("TCP bind",
 					sizeof(struct inet_bind_hashbucket),
@@ -3319,7 +3323,8 @@ void __init tcp_init(void)
 					NULL,
 					0,
 					64 * 1024);
-	tcp_hashinfo.bhash_size = 1U << tcp_hashinfo.bhash_size;
+	
+	tcp_hashinfo.bhash_size = 1U << tcp_hashinfo.bhash_size;//数组的长度
 	for (i = 0; i < tcp_hashinfo.bhash_size; i++) {
 		spin_lock_init(&tcp_hashinfo.bhash[i].lock);
 		INIT_HLIST_HEAD(&tcp_hashinfo.bhash[i].chain);

@@ -116,6 +116,8 @@ struct inet_hashinfo {
 	 *          TCP_ESTABLISHED <= sk->sk_state < TCP_CLOSE
 	 *
 	 */
+
+
 	struct inet_ehash_bucket	*ehash;
 	spinlock_t			*ehash_locks;
 	unsigned int			ehash_mask;
@@ -124,7 +126,7 @@ struct inet_hashinfo {
 	/* Ok, let's try this, I give up, we do need a local binding
 	 * TCP hash as well as the others for fast bind/connect.
 	 */
-	struct inet_bind_hashbucket	*bhash;
+	struct inet_bind_hashbucket	*bhash;                                               //绑定套接字的链表
 
 	unsigned int			bhash_size;
 	/* 4 bytes hole on 64 bit */
@@ -141,8 +143,13 @@ struct inet_hashinfo {
 	 * table where wildcard'd TCP sockets can exist.  Hash function here
 	 * is just local port number.
 	 */
-	struct inet_listen_hashbucket	listening_hash[INET_LHTABLE_SIZE]
+	struct inet_listen_hashbucket	listening_hash[INET_LHTABLE_SIZE]                //侦听套接字链表
 					____cacheline_aligned_in_smp;
+
+	//上述结构中三个哈希表看过去结构有点不同，listening_hash是一个数组，ehash和bhash只是一个指针。
+	//实际上三者的实现几乎是一样的，ehash和bhash
+	//都是指向了一个长度分别为ehash_size和bhash_size的数组。
+	//这些数组就是一个哈希表。每一项都是一个链表，存储值相同的tcp_sock(这些sock可能是端口复用的)。
 };
 
 static inline struct inet_ehash_bucket *inet_ehash_bucket(
@@ -177,6 +184,7 @@ void inet_bind_bucket_destroy(struct kmem_cache *cachep,
 static inline u32 inet_bhashfn(const struct net *net, const __u16 lport,
 			       const u32 bhash_size)
 {
+    //如果没有定义网络命名空间,则net_hash_mix(net)为0
 	return (lport + net_hash_mix(net)) & (bhash_size - 1);
 }
 

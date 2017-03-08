@@ -1274,6 +1274,7 @@ SYSCALL_DEFINE3(socket, int, family, int, type, int, protocol)
 
 	if (SOCK_NONBLOCK != O_NONBLOCK && (flags & SOCK_NONBLOCK))
 		flags = (flags & ~SOCK_NONBLOCK) | O_NONBLOCK;
+	
 	//创建套接字参数涉及到协议族,套接字类型(流式,数据报,原生)
 	
     //   例子:fd = socket(AF_INET,SOCK_DGRAM,0);  

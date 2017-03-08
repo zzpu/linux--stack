@@ -13,7 +13,7 @@ static inline u32 net_hash_mix(const struct net *net)
 	 * always zeroed
 	 */
 
-	return (u32)(((unsigned long)net) >> L1_CACHE_SHIFT);
+	return (u32)(((unsigned long)net) >> L1_CACHE_SHIFT); //6
 #else
 	return 0;
 #endif

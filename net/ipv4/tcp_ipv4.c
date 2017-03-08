@@ -91,7 +91,7 @@ int sysctl_tcp_low_latency __read_mostly;
 static int tcp_v4_md5_hash_hdr(char *md5_hash, const struct tcp_md5sig_key *key,
 			       __be32 daddr, __be32 saddr, const struct tcphdr *th);
 #endif
-
+//ÔÚtcp_init³õÊ¼»¯
 struct inet_hashinfo tcp_hashinfo;
 EXPORT_SYMBOL(tcp_hashinfo);
 

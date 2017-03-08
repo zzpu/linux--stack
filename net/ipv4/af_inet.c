@@ -335,6 +335,7 @@ lookup_protocol:
 
 	err = -ENOBUFS;
 	//对于tcp, tcp_prot
+	//slab在inet_init中调用proto_register时建立
 	sk = sk_alloc(net, PF_INET, GFP_KERNEL, answer_prot, kern);
 	if (!sk)
 		goto out;
@@ -452,6 +453,9 @@ int inet_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 	/* If the socket has its own bind function then use it. (RAW) */
 	
     //对于tcp, tcp_prot
+    //对于tcp,是没有bind的,所以下面不会进入if
+    
+    //slab在inet_init中调用proto_register时建立
 	if (sk->sk_prot->bind) {
 		err = sk->sk_prot->bind(sk, uaddr, addr_len);
 		goto out;
@@ -505,6 +509,12 @@ int inet_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 	lock_sock(sk);
 
 	/* Check these errors (active socket, double bind). */
+
+	//检查错误,重复绑定?
+	
+	//如果套接字不在初始状态TCP_CLOSE，或者已经绑定端口了，则出错。  
+	
+	//一个socket最多可以绑定一个端口，而一个端口则可能被多个socket共用。  
 	err = -EINVAL;
 	if (sk->sk_state != TCP_CLOSE || inet->inet_num)
 		goto out_release_sock;
@@ -514,13 +524,28 @@ int inet_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 		inet->inet_saddr = 0;  /* Use device */
 
 	/* Make sure we are allowed to bind here. */
-	if ((snum || !inet->bind_address_no_port) &&
+
+	//对于tcp, tcp_prot, inet_csk_get_port
+	//一般分配奇数
+	//端口可用的话返回0。 
+
+	//将socket加入的bind哈希表中
+
+	//在如果成功找到哈希桶,就在inet_bind_hash函数中设置sk的端口号,而且将sk添加到哈希桶的拥有者队列中
+
+	//哈希桶结构对象为inet_bind_bucket
+
+	//tcp协议的哈希表为tcp_hashinfo
+
+	
+	if ((snum || !inet->bind_address_no_port) &&		
 	    sk->sk_prot->get_port(sk, snum)) {
 		inet->inet_saddr = inet->inet_rcv_saddr = 0;
 		err = -EADDRINUSE;
 		goto out_release_sock;
 	}
 
+    //inet_rcv_saddr表示绑定的地址，接收数据时用于查找socket 
 	if (inet->inet_rcv_saddr)
 		sk->sk_userlocks |= SOCK_BINDADDR_LOCK;
 	if (snum)

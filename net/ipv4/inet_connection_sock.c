@@ -96,6 +96,7 @@ EXPORT_SYMBOL_GPL(inet_csk_bind_conflict);
 int inet_csk_get_port(struct sock *sk, unsigned short snum)
 {
 	bool reuse = sk->sk_reuse && sk->sk_state != TCP_LISTEN;
+	//对于tcp, tcp_prot, tcp_hashinfo
 	struct inet_hashinfo *hinfo = sk->sk_prot->h.hashinfo;
 	int ret = 1, attempts = 5, port = snum;
 	int smallest_size = -1, smallest_port;
@@ -108,9 +109,21 @@ int inet_csk_get_port(struct sock *sk, unsigned short snum)
 
 	if (port) {
 have_port:
+	    //对于tcp, tcp_prot, tcp_hashinfo
+	    //hinfo,即tcp_hashinfo在tcp_init初始化
+	    
+	    //inet_bhashfn是端口号port和哈希表长度的与
+
+		//head是哈希得到的链表头
+
+		//每一项都是一个链表，存储值相同的tcp_sock(这些sock可能是端口复用的)。
+
+		//根据端口号，确定所在的哈希桶
 		head = &hinfo->bhash[inet_bhashfn(net, port,
 						  hinfo->bhash_size)];
 		spin_lock_bh(&head->lock);
+
+		//枚举链表中的每一项
 		inet_bind_bucket_for_each(tb, &head->chain)
 			if (net_eq(ib_net(tb), net) && tb->port == port)
 				goto tb_found;
@@ -120,6 +133,9 @@ have_port:
 again:
 	attempt_half = (sk->sk_reuse == SK_CAN_REUSE) ? 1 : 0;
 other_half_scan:
+	
+	//这种情况就是随机绑定一个没有使用的端口
+	/* 获取端口号的取值范围 */  
 	inet_get_local_port_range(net, &low, &high);
 	high++; /* [32768, 60999] -> [32768, 61000[ */
 	if (high - low < 4)
@@ -151,20 +167,34 @@ other_parity_scan:
 			port -= remaining;
 		if (inet_is_local_reserved_port(net, port))
 			continue;
+		//对于tcp, tcp_prot, tcp_hashinfo
 		head = &hinfo->bhash[inet_bhashfn(net, port,
 						  hinfo->bhash_size)];
 		spin_lock_bh(&head->lock);
+
+		/* 从头遍历哈希桶 */  
 		inet_bind_bucket_for_each(tb, &head->chain)
 			if (net_eq(ib_net(tb), net) && tb->port == port) {
+				 /* 如果端口被使用了 */  
 				if (((tb->fastreuse > 0 && reuse) ||
 				     (tb->fastreuseport > 0 &&
 				      sk->sk_reuseport &&
 				      !rcu_access_pointer(sk->sk_reuseport_cb) &&
 				      uid_eq(tb->fastuid, uid))) &&
 				    (tb->num_owners < smallest_size || smallest_size == -1)) {
-					smallest_size = tb->num_owners;
-					smallest_port = port;
+					smallest_size = tb->num_owners;/* 记下这个端口使用者的个数 */  
+					smallest_port = port;/* 记下这个端口 */  
 				}
+
+
+//在以下的情况下可以重用端口：
+//1.绑定不同网络接口的可以使用同一个端口；
+//2.每一个设置了地址重用的并且都不处于listen状态的所有的套接字可以使用一个端口，这意味着它们都是主动外出的套接字，目的由它们自己掌握；
+//即便在1和2都不满足的情况下，使用不同源地址的服务器套接字也可以使用同一个端口
+
+//对于一般的tcp协议，该处理冲突的回调函数就是inet_csk_bind_conflict
+
+				 /* 如果系统绑定的端口已经很多了，那么就判断端口是否有绑定冲突*/  
 				if (!inet_csk(sk)->icsk_af_ops->bind_conflict(sk, tb, false))
 					goto tb_found;
 				goto next_port;
@@ -191,6 +221,9 @@ next_port:
 	return ret;
 
 tb_not_found:
+	//对于tcp, tcp_prot, tcp_hashinfo
+
+	//如果在哈希得到的链表中没有找到对应端口的元素
 	tb = inet_bind_bucket_create(hinfo->bind_bucket_cachep,
 				     net, head, port);
 	if (!tb)
