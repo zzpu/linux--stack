@@ -191,6 +191,7 @@ static int inet_autobind(struct sock *sk)
 /*
  *	Move a socket into listening state.
  */
+ //现在backlog用来确定已完成队列（完成三次握手等待accept）的长度，而不再是已完成队列和未完成连接队列之和（linux 2.2之前）
 int inet_listen(struct socket *sock, int backlog)
 {
 	struct sock *sk = sock->sk;
@@ -217,6 +218,10 @@ int inet_listen(struct socket *sock, int backlog)
 		 * because the socket was in TCP_LISTEN state previously but
 		 * was shutdown() rather than close().
 		 */
+
+		//首先HTTP请求需要TCP三次握手，尽管开启keepalive(长连接)，可以依然有35%的请求是重新发起一条连接。
+		
+		//而三次握手会造成一个RTT(Round Trip Time)的延时，因此TFO的目标就是去除这个延时，在三次握手期间也能交换数据
 		if ((sysctl_tcp_fastopen & TFO_SERVER_WO_SOCKOPT1) &&
 		    (sysctl_tcp_fastopen & TFO_SERVER_ENABLE) &&
 		    !inet_csk(sk)->icsk_accept_queue.fastopenq.max_qlen) {

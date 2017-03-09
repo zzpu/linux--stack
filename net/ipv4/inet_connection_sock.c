@@ -769,7 +769,8 @@ int inet_csk_listen_start(struct sock *sk, int backlog)
 	struct inet_connection_sock *icsk = inet_csk(sk);
 	struct inet_sock *inet = inet_sk(sk);
 	int err = -EADDRINUSE;
-
+	
+    //创建接受队列和请求队列,实质是初始化链表头,设置为NULL
 	reqsk_queue_alloc(&icsk->icsk_accept_queue);
 
 	sk->sk_max_ack_backlog = backlog;
@@ -781,11 +782,16 @@ int inet_csk_listen_start(struct sock *sk, int backlog)
 	 * It is OK, because this socket enters to hash table only
 	 * after validation is complete.
 	 */
+	 
+	//更改为监听状态
 	sk_state_store(sk, TCP_LISTEN);
+	//tcp_prot, inet_csk_get_port
 	if (!sk->sk_prot->get_port(sk, inet->inet_num)) {
 		inet->inet_sport = htons(inet->inet_num);
 
 		sk_dst_reset(sk);
+		//这里将sk加入监听哈希表
+		//inet_hash --> tcp_prot --> hashinfo->listening_hash
 		err = sk->sk_prot->hash(sk);
 
 		if (likely(!err))

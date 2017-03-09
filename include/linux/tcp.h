@@ -414,6 +414,8 @@ static inline bool tcp_passive_fastopen(const struct sock *sk)
 static inline void fastopen_queue_tune(struct sock *sk, int backlog)
 {
 	struct request_sock_queue *queue = &inet_csk(sk)->icsk_accept_queue;
+	//  定义了系统中每一个端口最大的监听队列的长度,这是个全局的参数,默认值为128
+	// /proc/sys/net/core/somaxconn
 	int somaxconn = READ_ONCE(sock_net(sk)->core.sysctl_somaxconn);
 
 	queue->fastopenq.max_qlen = min_t(unsigned int, backlog, somaxconn);

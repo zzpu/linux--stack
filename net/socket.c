@@ -1430,6 +1430,8 @@ SYSCALL_DEFINE3(bind, int, fd, struct sockaddr __user *, umyaddr, int, addrlen)
 			//对于流式套接字,sock->ops为inet_stream_ops
 			//sock->ops->bind为inet_bind
 
+			//实质是将sock对象放到哈希表中,对于tcp协议,则放到tcp_hashinfo的bhash
+
 			
 			if (!err)
 				err = sock->ops->bind(sock,
@@ -1446,13 +1448,14 @@ SYSCALL_DEFINE3(bind, int, fd, struct sockaddr __user *, umyaddr, int, addrlen)
  *	necessary for a listen, and if that works, we mark the socket as
  *	ready for listening.
  */
-
+//现在backlog用来确定已完成队列（完成三次握手等待accept）的长度，而不再是已完成队列和未完成连接队列之和（linux 2.2之前)
 SYSCALL_DEFINE2(listen, int, fd, int, backlog)
 {
 	struct socket *sock;
 	int err, fput_needed;
 	int somaxconn;
-
+	
+	//根据文件描述符获得file对象,然后从private_data成员获得socket对象
 	sock = sockfd_lookup_light(fd, &err, &fput_needed);
 	if (sock) {
 		somaxconn = sock_net(sock->sk)->core.sysctl_somaxconn;
@@ -1460,6 +1463,13 @@ SYSCALL_DEFINE2(listen, int, fd, int, backlog)
 			backlog = somaxconn;
 
 		err = security_socket_listen(sock, backlog);
+		
+		//套接字类型与协议的关联对象数组定义在inetsw_array,inet_init函数中会加载到inetsw拉链表
+		//建立socket过程中,在inet_create中初始化ops
+		//对于流式套接字,sock->ops为inet_stream_ops
+		//listen为inet_listen
+
+		//实质是加入到hashinfo->listening_hash
 		if (!err)
 			err = sock->ops->listen(sock, backlog);
 
