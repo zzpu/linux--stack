@@ -96,7 +96,7 @@ EXPORT_SYMBOL_GPL(inet_csk_bind_conflict);
 int inet_csk_get_port(struct sock *sk, unsigned short snum)
 {
 	bool reuse = sk->sk_reuse && sk->sk_state != TCP_LISTEN;
-	//¶ÔÓÚtcp, tcp_prot, tcp_hashinfo
+	//å¯¹äºŽtcp, tcp_prot, tcp_hashinfo
 	struct inet_hashinfo *hinfo = sk->sk_prot->h.hashinfo;
 	int ret = 1, attempts = 5, port = snum;
 	int smallest_size = -1, smallest_port;
@@ -109,21 +109,21 @@ int inet_csk_get_port(struct sock *sk, unsigned short snum)
 
 	if (port) {
 have_port:
-	    //¶ÔÓÚtcp, tcp_prot, tcp_hashinfo
-	    //hinfo,¼´tcp_hashinfoÔÚtcp_init³õÊ¼»¯
+	    //å¯¹äºŽtcp, tcp_prot, tcp_hashinfo
+	    //hinfo,å³tcp_hashinfoåœ¨tcp_initåˆå§‹åŒ–
 	    
-	    //inet_bhashfnÊÇ¶Ë¿ÚºÅportºÍ¹þÏ£±í³¤¶ÈµÄÓë
+	    //inet_bhashfnæ˜¯ç«¯å£å·portå’Œå“ˆå¸Œè¡¨é•¿åº¦çš„ä¸Ž
 
-		//headÊÇ¹þÏ£µÃµ½µÄÁ´±íÍ·
+		//headæ˜¯å“ˆå¸Œå¾—åˆ°çš„é“¾è¡¨å¤´
 
-		//Ã¿Ò»Ïî¶¼ÊÇÒ»¸öÁ´±í£¬´æ´¢ÖµÏàÍ¬µÄtcp_sock(ÕâÐ©sock¿ÉÄÜÊÇ¶Ë¿Ú¸´ÓÃµÄ)¡£
+		//æ¯ä¸€é¡¹éƒ½æ˜¯ä¸€ä¸ªé“¾è¡¨ï¼Œå­˜å‚¨å€¼ç›¸åŒçš„tcp_sock(è¿™äº›sockå¯èƒ½æ˜¯ç«¯å£å¤ç”¨çš„)ã€‚
 
-		//¸ù¾Ý¶Ë¿ÚºÅ£¬È·¶¨ËùÔÚµÄ¹þÏ£Í°
+		//æ ¹æ®ç«¯å£å·ï¼Œç¡®å®šæ‰€åœ¨çš„å“ˆå¸Œæ¡¶
 		head = &hinfo->bhash[inet_bhashfn(net, port,
 						  hinfo->bhash_size)];
 		spin_lock_bh(&head->lock);
 
-		//Ã¶¾ÙÁ´±íÖÐµÄÃ¿Ò»Ïî
+		//æžšä¸¾é“¾è¡¨ä¸­çš„æ¯ä¸€é¡¹
 		inet_bind_bucket_for_each(tb, &head->chain)
 			if (net_eq(ib_net(tb), net) && tb->port == port)
 				goto tb_found;
@@ -134,8 +134,8 @@ again:
 	attempt_half = (sk->sk_reuse == SK_CAN_REUSE) ? 1 : 0;
 other_half_scan:
 	
-	//ÕâÖÖÇé¿ö¾ÍÊÇËæ»ú°ó¶¨Ò»¸öÃ»ÓÐÊ¹ÓÃµÄ¶Ë¿Ú
-	/* »ñÈ¡¶Ë¿ÚºÅµÄÈ¡Öµ·¶Î§ */  
+	//è¿™ç§æƒ…å†µå°±æ˜¯éšæœºç»‘å®šä¸€ä¸ªæ²¡æœ‰ä½¿ç”¨çš„ç«¯å£
+	/* èŽ·å–ç«¯å£å·çš„å–å€¼èŒƒå›´ */  
 	inet_get_local_port_range(net, &low, &high);
 	high++; /* [32768, 60999] -> [32768, 61000[ */
 	if (high - low < 4)
@@ -167,34 +167,34 @@ other_parity_scan:
 			port -= remaining;
 		if (inet_is_local_reserved_port(net, port))
 			continue;
-		//¶ÔÓÚtcp, tcp_prot, tcp_hashinfo
+		//å¯¹äºŽtcp, tcp_prot, tcp_hashinfo
 		head = &hinfo->bhash[inet_bhashfn(net, port,
 						  hinfo->bhash_size)];
 		spin_lock_bh(&head->lock);
 
-		/* ´ÓÍ·±éÀú¹þÏ£Í° */  
+		/* ä»Žå¤´éåŽ†å“ˆå¸Œæ¡¶ */  
 		inet_bind_bucket_for_each(tb, &head->chain)
 			if (net_eq(ib_net(tb), net) && tb->port == port) {
-				 /* Èç¹û¶Ë¿Ú±»Ê¹ÓÃÁË */  
+				 /* å¦‚æžœç«¯å£è¢«ä½¿ç”¨äº† */  
 				if (((tb->fastreuse > 0 && reuse) ||
 				     (tb->fastreuseport > 0 &&
 				      sk->sk_reuseport &&
 				      !rcu_access_pointer(sk->sk_reuseport_cb) &&
 				      uid_eq(tb->fastuid, uid))) &&
 				    (tb->num_owners < smallest_size || smallest_size == -1)) {
-					smallest_size = tb->num_owners;/* ¼ÇÏÂÕâ¸ö¶Ë¿ÚÊ¹ÓÃÕßµÄ¸öÊý */  
-					smallest_port = port;/* ¼ÇÏÂÕâ¸ö¶Ë¿Ú */  
+					smallest_size = tb->num_owners;/* è®°ä¸‹è¿™ä¸ªç«¯å£ä½¿ç”¨è€…çš„ä¸ªæ•° */  
+					smallest_port = port;/* è®°ä¸‹è¿™ä¸ªç«¯å£ */  
 				}
 
 
-//ÔÚÒÔÏÂµÄÇé¿öÏÂ¿ÉÒÔÖØÓÃ¶Ë¿Ú£º
-//1.°ó¶¨²»Í¬ÍøÂç½Ó¿ÚµÄ¿ÉÒÔÊ¹ÓÃÍ¬Ò»¸ö¶Ë¿Ú£»
-//2.Ã¿Ò»¸öÉèÖÃÁËµØÖ·ÖØÓÃµÄ²¢ÇÒ¶¼²»´¦ÓÚlisten×´Ì¬µÄËùÓÐµÄÌ×½Ó×Ö¿ÉÒÔÊ¹ÓÃÒ»¸ö¶Ë¿Ú£¬ÕâÒâÎ¶×ÅËüÃÇ¶¼ÊÇÖ÷¶¯Íâ³öµÄÌ×½Ó×Ö£¬Ä¿µÄÓÉËüÃÇ×Ô¼ºÕÆÎÕ£»
-//¼´±ãÔÚ1ºÍ2¶¼²»Âú×ãµÄÇé¿öÏÂ£¬Ê¹ÓÃ²»Í¬Ô´µØÖ·µÄ·þÎñÆ÷Ì×½Ó×ÖÒ²¿ÉÒÔÊ¹ÓÃÍ¬Ò»¸ö¶Ë¿Ú
+//åœ¨ä»¥ä¸‹çš„æƒ…å†µä¸‹å¯ä»¥é‡ç”¨ç«¯å£ï¼š
+//1.ç»‘å®šä¸åŒç½‘ç»œæŽ¥å£çš„å¯ä»¥ä½¿ç”¨åŒä¸€ä¸ªç«¯å£ï¼›
+//2.æ¯ä¸€ä¸ªè®¾ç½®äº†åœ°å€é‡ç”¨çš„å¹¶ä¸”éƒ½ä¸å¤„äºŽlistençŠ¶æ€çš„æ‰€æœ‰çš„å¥—æŽ¥å­—å¯ä»¥ä½¿ç”¨ä¸€ä¸ªç«¯å£ï¼Œè¿™æ„å‘³ç€å®ƒä»¬éƒ½æ˜¯ä¸»åŠ¨å¤–å‡ºçš„å¥—æŽ¥å­—ï¼Œç›®çš„ç”±å®ƒä»¬è‡ªå·±æŽŒæ¡ï¼›
+//å³ä¾¿åœ¨1å’Œ2éƒ½ä¸æ»¡è¶³çš„æƒ…å†µä¸‹ï¼Œä½¿ç”¨ä¸åŒæºåœ°å€çš„æœåŠ¡å™¨å¥—æŽ¥å­—ä¹Ÿå¯ä»¥ä½¿ç”¨åŒä¸€ä¸ªç«¯å£
 
-//¶ÔÓÚÒ»°ãµÄtcpÐ­Òé£¬¸Ã´¦Àí³åÍ»µÄ»Øµ÷º¯Êý¾ÍÊÇinet_csk_bind_conflict
+//å¯¹äºŽä¸€èˆ¬çš„tcpåè®®ï¼Œè¯¥å¤„ç†å†²çªçš„å›žè°ƒå‡½æ•°å°±æ˜¯inet_csk_bind_conflict
 
-				 /* Èç¹ûÏµÍ³°ó¶¨µÄ¶Ë¿ÚÒÑ¾­ºÜ¶àÁË£¬ÄÇÃ´¾ÍÅÐ¶Ï¶Ë¿ÚÊÇ·ñÓÐ°ó¶¨³åÍ»*/  
+				 /* å¦‚æžœç³»ç»Ÿç»‘å®šçš„ç«¯å£å·²ç»å¾ˆå¤šäº†ï¼Œé‚£ä¹ˆå°±åˆ¤æ–­ç«¯å£æ˜¯å¦æœ‰ç»‘å®šå†²çª*/  
 				if (!inet_csk(sk)->icsk_af_ops->bind_conflict(sk, tb, false))
 					goto tb_found;
 				goto next_port;
@@ -221,9 +221,9 @@ next_port:
 	return ret;
 
 tb_not_found:
-	//¶ÔÓÚtcp, tcp_prot, tcp_hashinfo
+	//å¯¹äºŽtcp, tcp_prot, tcp_hashinfo
 
-	//Èç¹ûÔÚ¹þÏ£µÃµ½µÄÁ´±íÖÐÃ»ÓÐÕÒµ½¶ÔÓ¦¶Ë¿ÚµÄÔªËØ
+	//å¦‚æžœåœ¨å“ˆå¸Œå¾—åˆ°çš„é“¾è¡¨ä¸­æ²¡æœ‰æ‰¾åˆ°å¯¹åº”ç«¯å£çš„å…ƒç´ 
 	tb = inet_bind_bucket_create(hinfo->bind_bucket_cachep,
 				     net, head, port);
 	if (!tb)
@@ -770,7 +770,7 @@ int inet_csk_listen_start(struct sock *sk, int backlog)
 	struct inet_sock *inet = inet_sk(sk);
 	int err = -EADDRINUSE;
 	
-    //´´½¨½ÓÊÜ¶ÓÁÐºÍÇëÇó¶ÓÁÐ,ÊµÖÊÊÇ³õÊ¼»¯Á´±íÍ·,ÉèÖÃÎªNULL
+    //åˆ›å»ºæŽ¥å—é˜Ÿåˆ—å’Œè¯·æ±‚é˜Ÿåˆ—,å®žè´¨æ˜¯åˆå§‹åŒ–é“¾è¡¨å¤´,è®¾ç½®ä¸ºNULL
 	reqsk_queue_alloc(&icsk->icsk_accept_queue);
 
 	sk->sk_max_ack_backlog = backlog;
@@ -783,14 +783,14 @@ int inet_csk_listen_start(struct sock *sk, int backlog)
 	 * after validation is complete.
 	 */
 	 
-	//¸ü¸ÄÎª¼àÌý×´Ì¬
+	//æ›´æ”¹ä¸ºç›‘å¬çŠ¶æ€
 	sk_state_store(sk, TCP_LISTEN);
 	//tcp_prot, inet_csk_get_port
 	if (!sk->sk_prot->get_port(sk, inet->inet_num)) {
 		inet->inet_sport = htons(inet->inet_num);
 
 		sk_dst_reset(sk);
-		//ÕâÀï½«sk¼ÓÈë¼àÌý¹þÏ£±í
+		//è¿™é‡Œå°†skåŠ å…¥ç›‘å¬å“ˆå¸Œè¡¨
 		//inet_hash --> tcp_prot --> hashinfo->listening_hash
 		err = sk->sk_prot->hash(sk);
 

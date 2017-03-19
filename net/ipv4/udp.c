@@ -2211,7 +2211,7 @@ int udp_abort(struct sock *sk, int err)
 EXPORT_SYMBOL_GPL(udp_abort);
 
 
-//slabÔÚinet_initÖĞµ÷ÓÃproto_registerÊ±½¨Á¢
+//slabåœ¨inet_initä¸­è°ƒç”¨proto_registeræ—¶å»ºç«‹
 
 struct proto udp_prot = {
 	.name		   = "UDP",

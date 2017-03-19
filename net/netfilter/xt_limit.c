@@ -1,5 +1,5 @@
-/* (C) 1999 Jérôme de Vivie <devivie@info.enserb.u-bordeaux.fr>
- * (C) 1999 Hervé Eychenne <eychenne@info.enserb.u-bordeaux.fr>
+/* (C) 1999 J茅r么me de Vivie <devivie@info.enserb.u-bordeaux.fr>
+ * (C) 1999 Herv茅 Eychenne <eychenne@info.enserb.u-bordeaux.fr>
  * (C) 2006-2012 Patrick McHardy <kaber@trash.net>
  *
  * This program is free software; you can redistribute it and/or modify

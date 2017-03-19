@@ -992,7 +992,7 @@ bool ping_rcv(struct sk_buff *skb)
 }
 EXPORT_SYMBOL_GPL(ping_rcv);
 
-//slabÔÚinet_initÖÐµ÷ÓÃproto_registerÊ±½¨Á¢
+//slabåœ¨inet_initä¸­è°ƒç”¨proto_registeræ—¶å»ºç«‹
 
 struct proto ping_prot = {
 	.name =		"PING",

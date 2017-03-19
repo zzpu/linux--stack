@@ -247,7 +247,7 @@ static struct inode *sock_alloc_inode(struct super_block *sb)
 	struct socket_alloc *ei;
 	struct socket_wq *wq;
 	
-    //sock_inode_cachep¾ÍÊÇÀàĞÍkmem_cacheµÄ¶ÔÏó
+    //sock_inode_cachepå°±æ˜¯ç±»å‹kmem_cacheçš„å¯¹è±¡
 	ei = kmem_cache_alloc(sock_inode_cachep, GFP_KERNEL);
 	if (!ei)
 		return NULL;
@@ -411,11 +411,11 @@ struct file *sock_alloc_file(struct socket *sock, int flags, const char *dname)
 	path.dentry = d_alloc_pseudo(sock_mnt->mnt_sb, &name);
 	if (unlikely(!path.dentry))
 		return ERR_PTR(-ENOMEM);
-	path.mnt = mntget(sock_mnt);//¶¨ÒåÔÚ372ĞĞµÄ,vfsmountÀàĞÍ
+	path.mnt = mntget(sock_mnt);//å®šä¹‰åœ¨372è¡Œçš„,vfsmountç±»å‹
 
 	d_instantiate(path.dentry, SOCK_INODE(sock));
 
-    //´Ófilp_cachepÖĞ»ñµÃÒ»¸öfile¶ÔÏó
+    //ä»filp_cachepä¸­è·å¾—ä¸€ä¸ªfileå¯¹è±¡
 	file = alloc_file(&path, FMODE_READ | FMODE_WRITE,
 		  &socket_file_ops);
 	if (IS_ERR(file)) {
@@ -435,16 +435,16 @@ EXPORT_SYMBOL(sock_alloc_file);
 static int sock_map_fd(struct socket *sock, int flags)
 {
 	struct file *newfile;
-	//·ÖÅäÎÄ¼şÃèÊö·û
+	//åˆ†é…æ–‡ä»¶æè¿°ç¬¦
 	int fd = get_unused_fd_flags(flags);
 	if (unlikely(fd < 0))
 		return fd;
-    //ÊÇ¸öfile¶ÔÏó
+    //æ˜¯ä¸ªfileå¯¹è±¡
 	newfile = sock_alloc_file(sock, flags, NULL);
 	if (likely(!IS_ERR(newfile))) {
-		//½«file°´°²×°µ½µ÷ÓÃ½ø³Ì
+		//å°†fileæŒ‰å®‰è£…åˆ°è°ƒç”¨è¿›ç¨‹
 		
-		//±¾ÖÊÉÏÊÇÒÔÎÄ¼şÃèÊö·ûÎªÏÂ±ê,fileÎªÖµ,Ìî³äÎÄ¼şÃèÊö·ûÊı×éfd_array
+		//æœ¬è´¨ä¸Šæ˜¯ä»¥æ–‡ä»¶æè¿°ç¬¦ä¸ºä¸‹æ ‡,fileä¸ºå€¼,å¡«å……æ–‡ä»¶æè¿°ç¬¦æ•°ç»„fd_array
 		fd_install(fd, newfile);
 		return fd;
 	}
@@ -556,20 +556,20 @@ struct socket *sock_alloc(void)
 	struct inode *inode;
 	struct socket *sock;
 
-    //ÕâÀïnewÒ»¸öinode,×îÖÕµ÷ÓÃ³¬¼¶¿é¶ÔÓ¦µÄinode·ÖÅäº¯Êı  
+    //è¿™é‡Œnewä¸€ä¸ªinode,æœ€ç»ˆè°ƒç”¨è¶…çº§å—å¯¹åº”çš„inodeåˆ†é…å‡½æ•°  
     
-    //sock_initº¯ÊıÖĞ»á×¢²ásock_fs_typeÎÄ¼şÏµÍ³,ÆäÖĞµÄ
+    //sock_initå‡½æ•°ä¸­ä¼šæ³¨å†Œsock_fs_typeæ–‡ä»¶ç³»ç»Ÿ,å…¶ä¸­çš„
     
-    //¶¨ÒåÔÚ372ĞĞµÄ,vfsmountÀàĞÍ
+    //å®šä¹‰åœ¨372è¡Œçš„,vfsmountç±»å‹
     
-    //³õÊ¼»¯ÔÚsock_initº¯Êı
+    //åˆå§‹åŒ–åœ¨sock_initå‡½æ•°
 
-	 //×îÖÕµ÷ÓÃsock_alloc_inode
+	 //æœ€ç»ˆè°ƒç”¨sock_alloc_inode
 	inode = new_inode_pseudo(sock_mnt->mnt_sb);
 	if (!inode)
 		return NULL;
 	
-    //¸ù¾İÒ»¸ö½á¹¹Ìå±äÁ¿ÖĞµÄÒ»¸öÓò³ÉÔ±±äÁ¿µÄÖ¸ÕëÀ´»ñÈ¡Ö¸ÏòÕû¸ö½á¹¹Ìå±äÁ¿µÄÖ¸Õë
+    //æ ¹æ®ä¸€ä¸ªç»“æ„ä½“å˜é‡ä¸­çš„ä¸€ä¸ªåŸŸæˆå‘˜å˜é‡çš„æŒ‡é’ˆæ¥è·å–æŒ‡å‘æ•´ä¸ªç»“æ„ä½“å˜é‡çš„æŒ‡é’ˆ
 	sock = SOCKET_I(inode);
 
 	kmemcheck_annotate_bitfield(sock, type);
@@ -1146,22 +1146,22 @@ int __sock_create(struct net *net, int family, int type, int protocol,
 	 *	default.
 	 */
 
-	//ÊÇ´ÓslabÖĞ´´½¨µÄ,ÔÚinit_inodecacheº¯ÊıÖĞ·ÖÅäµ¥Ôª´óĞ¡Îªsizeof(struct socket_alloc)
+	//æ˜¯ä»slabä¸­åˆ›å»ºçš„,åœ¨init_inodecacheå‡½æ•°ä¸­åˆ†é…å•å…ƒå¤§å°ä¸ºsizeof(struct socket_alloc)
 	
-	//init_inodecacheÊ±ÒÑ¾­Ö¸¶¨ÁË·ÖÅäµ¥Î»Îªsocket_allocµÄ´óĞ¡
+	//init_inodecacheæ—¶å·²ç»æŒ‡å®šäº†åˆ†é…å•ä½ä¸ºsocket_allocçš„å¤§å°
 
-	//socket_alloc°üº¬Ò»¸ösocketºÍÒ»¸öinode,sock_alloc½«Æäsocket·µ»Ø
+	//socket_allocåŒ…å«ä¸€ä¸ªsocketå’Œä¸€ä¸ªinode,sock_allocå°†å…¶socketè¿”å›
 	
-	sock = sock_alloc();                                                //´´½¨socket_allocÀàĞÍµÄinode ------------------1  
+	sock = sock_alloc();                                                //åˆ›å»ºsocket_allocç±»å‹çš„inode ------------------1  
 	if (!sock) {
 		net_warn_ratelimited("socket: no more sockets\n");
 		return -ENFILE;	/* Not exactly a match, but its the
 				   closest posix thing */
 	}
 	
-	//³£ÓÃµÄSOCK_STREAM,SOCK_DGRAM,SOCK_RAWµÈ£¬»¹ÓĞLinux×ÔÓĞµÄSOCK_PACKET
+	//å¸¸ç”¨çš„SOCK_STREAM,SOCK_DGRAM,SOCK_RAWç­‰ï¼Œè¿˜æœ‰Linuxè‡ªæœ‰çš„SOCK_PACKET
 	
-	sock->type = type;                                                  //ÉèÖÃÌ×½Ó×ÖµÄÀàĞÍ-------------------------------2  
+	sock->type = type;                                                  //è®¾ç½®å¥—æ¥å­—çš„ç±»å‹-------------------------------2  
 
 #ifdef CONFIG_MODULES
 	/* Attempt to load a protocol module if the find failed.
@@ -1177,12 +1177,12 @@ int __sock_create(struct net *net, int family, int type, int protocol,
 	rcu_read_lock();
 	
 
-    //net_familiesÎªnet_proto_familyÀàĞÍµÄÊı×é
+    //net_familiesä¸ºnet_proto_familyç±»å‹çš„æ•°ç»„
     
-    //net_familiesÊı×éÔÚº¯Êısock_registerÖĞ±»³õÊ¼»¯
+    //net_familiesæ•°ç»„åœ¨å‡½æ•°sock_registerä¸­è¢«åˆå§‹åŒ–
     
-    //ÆäÖĞtcp/ipĞ­Òé×åµÄÔÚinet_initÖĞµ÷ÓÃsock_register
-	pf = rcu_dereference(net_families[family]);                          //»ñµÃ¶ÔÓ¦Ğ­Òé×åµÄ²Ù×÷¿é-->ÎªµÄÊÇÏÂÃæcreate²Ù×÷--3  
+    //å…¶ä¸­tcp/ipåè®®æ—çš„åœ¨inet_initä¸­è°ƒç”¨sock_register
+	pf = rcu_dereference(net_families[family]);                          //è·å¾—å¯¹åº”åè®®æ—çš„æ“ä½œå—-->ä¸ºçš„æ˜¯ä¸‹é¢createæ“ä½œ--3  
 	err = -EAFNOSUPPORT;
 	if (!pf)
 		goto out_release;
@@ -1197,14 +1197,14 @@ int __sock_create(struct net *net, int family, int type, int protocol,
 	/* Now protected by module ref count */
 	rcu_read_unlock();
 	
-	//¶ÔÓÚÍøÂçĞ­Òé×åµ÷ÓÃµÄÊÇtcp/ipĞ­Òé×åµÄinet_createº¯Êı
+	//å¯¹äºç½‘ç»œåè®®æ—è°ƒç”¨çš„æ˜¯tcp/ipåè®®æ—çš„inet_createå‡½æ•°
 
-	//pfÖ¸Ïòinet_family_ops¶ÔÏó,ÀàĞÍÎªnet_proto_family
+	//pfæŒ‡å‘inet_family_opså¯¹è±¡,ç±»å‹ä¸ºnet_proto_family
 
    //inet_create
-   //ÊµÖÊÉÏ¾ÍÊÇÓÃinetsw_arrayÖĞÌ×½Ó×ÖÀàĞÍ¶ÔÓ¦µÄĞ­ÒéÏà¹Ø¶ÔÏóÌî³äsocket¶ÔÏó
-   //²¢¹¹½¨sock¶ÔÏó
-	err = pf->create(net, sock, protocol, kern);                          //¹¹Ôìsock¶ÔÏó£¬È»ºó¹Òµ½socket¶ÔÏóÉÏ------------4  
+   //å®è´¨ä¸Šå°±æ˜¯ç”¨inetsw_arrayä¸­å¥—æ¥å­—ç±»å‹å¯¹åº”çš„åè®®ç›¸å…³å¯¹è±¡å¡«å……socketå¯¹è±¡
+   //å¹¶æ„å»ºsockå¯¹è±¡
+	err = pf->create(net, sock, protocol, kern);                          //æ„é€ sockå¯¹è±¡ï¼Œç„¶åæŒ‚åˆ°socketå¯¹è±¡ä¸Š------------4  
 	if (err < 0)
 		goto out_module_put;
 	
@@ -1275,15 +1275,15 @@ SYSCALL_DEFINE3(socket, int, family, int, type, int, protocol)
 	if (SOCK_NONBLOCK != O_NONBLOCK && (flags & SOCK_NONBLOCK))
 		flags = (flags & ~SOCK_NONBLOCK) | O_NONBLOCK;
 	
-	//´´½¨Ì×½Ó×Ö²ÎÊıÉæ¼°µ½Ğ­Òé×å,Ì×½Ó×ÖÀàĞÍ(Á÷Ê½,Êı¾İ±¨,Ô­Éú)
+	//åˆ›å»ºå¥—æ¥å­—å‚æ•°æ¶‰åŠåˆ°åè®®æ—,å¥—æ¥å­—ç±»å‹(æµå¼,æ•°æ®æŠ¥,åŸç”Ÿ)
 	
-    //   Àı×Ó:fd = socket(AF_INET,SOCK_DGRAM,0);  
-	retval = sock_create(family, type, protocol, &sock);//¹¹ÔìÌØÊâsocketÎÄ¼ş(ÆäÊµËùÎ½µÄ´´½¨ÎÄ¼ş¾ÍÊÇ´´½¨inode£¬ÏÈ²»Ì½¾¿)  
+    //   ä¾‹å­:fd = socket(AF_INET,SOCK_DGRAM,0);  
+	retval = sock_create(family, type, protocol, &sock);//æ„é€ ç‰¹æ®Šsocketæ–‡ä»¶(å…¶å®æ‰€è°“çš„åˆ›å»ºæ–‡ä»¶å°±æ˜¯åˆ›å»ºinodeï¼Œå…ˆä¸æ¢ç©¶)  
 	if (retval < 0)
 		goto out;
 
-    //¹¹Ôìfile¶ÔÏó,Í¬Ê±½«socket¶ÔÏó¹Òµ½file¶ÔÏóµÄprivate_data³ÉÔ±
-	retval = sock_map_fd(sock, flags & (O_CLOEXEC | O_NONBLOCK));//·ÖÅäÎÄ¼şÃèÊö·û£¬¹¹Ôìfile,²¢°²×°µ½µ÷ÓÃ½ø³Ì  
+    //æ„é€ fileå¯¹è±¡,åŒæ—¶å°†socketå¯¹è±¡æŒ‚åˆ°fileå¯¹è±¡çš„private_dataæˆå‘˜
+	retval = sock_map_fd(sock, flags & (O_CLOEXEC | O_NONBLOCK));//åˆ†é…æ–‡ä»¶æè¿°ç¬¦ï¼Œæ„é€ file,å¹¶å®‰è£…åˆ°è°ƒç”¨è¿›ç¨‹  
 	if (retval < 0)
 		goto out_release;
 
@@ -1414,23 +1414,23 @@ SYSCALL_DEFINE3(bind, int, fd, struct sockaddr __user *, umyaddr, int, addrlen)
 	struct sockaddr_storage address;
 	int err, fput_needed;
 
-    //¸ù¾İÎÄ¼şÃèÊö·û»ñµÃfile¶ÔÏó,È»ºó´Óprivate_data³ÉÔ±»ñµÃsocket¶ÔÏó
+    //æ ¹æ®æ–‡ä»¶æè¿°ç¬¦è·å¾—fileå¯¹è±¡,ç„¶åä»private_dataæˆå‘˜è·å¾—socketå¯¹è±¡
 	sock = sockfd_lookup_light(fd, &err, &fput_needed);
 	if (sock) {
-		//´ÓÓÃ»§¿Õ¼ä¿½±´µØÖ·ĞÅÏ¢µ½ÄÚºË
+		//ä»ç”¨æˆ·ç©ºé—´æ‹·è´åœ°å€ä¿¡æ¯åˆ°å†…æ ¸
 		err = move_addr_to_kernel(umyaddr, addrlen, &address);
 		if (err >= 0) {
 			err = security_socket_bind(sock,
 						   (struct sockaddr *)&address,
 						   addrlen);
 
-			//sock->opsÔÚinet_create³õÊ¼»¯
-			//ÔÚinetsw_arrayÊı×éÓĞÌ×½Ó×ÖÀàĞÍºÍĞ­ÒéµÄ¶ÔÓ¦ÃèÊö¶ÔÏó
+			//sock->opsåœ¨ inet_create åˆå§‹åŒ–
+			//åœ¨inetsw_arrayæ•°ç»„æœ‰å¥—æ¥å­—ç±»å‹å’Œåè®®çš„å¯¹åº”æè¿°å¯¹è±¡
 			
-			//¶ÔÓÚÁ÷Ê½Ì×½Ó×Ö,sock->opsÎªinet_stream_ops
-			//sock->ops->bindÎªinet_bind
+			//å¯¹äºæµå¼å¥—æ¥å­—,sock->opsä¸ºinet_stream_ops
+			//sock->ops->bindä¸ºinet_bind
 
-			//ÊµÖÊÊÇ½«sock¶ÔÏó·Åµ½¹şÏ£±íÖĞ,¶ÔÓÚtcpĞ­Òé,Ôò·Åµ½tcp_hashinfoµÄbhash
+			//å®è´¨æ˜¯å°†sockå¯¹è±¡æ”¾åˆ°å“ˆå¸Œè¡¨ä¸­,å¯¹äºtcpåè®®,åˆ™æ”¾åˆ° tcp_hashinfo çš„bhash
 
 			
 			if (!err)
@@ -1448,14 +1448,14 @@ SYSCALL_DEFINE3(bind, int, fd, struct sockaddr __user *, umyaddr, int, addrlen)
  *	necessary for a listen, and if that works, we mark the socket as
  *	ready for listening.
  */
-//ÏÖÔÚbacklogÓÃÀ´È·¶¨ÒÑÍê³É¶ÓÁĞ£¨Íê³ÉÈı´ÎÎÕÊÖµÈ´ıaccept£©µÄ³¤¶È£¬¶ø²»ÔÙÊÇÒÑÍê³É¶ÓÁĞºÍÎ´Íê³ÉÁ¬½Ó¶ÓÁĞÖ®ºÍ£¨linux 2.2Ö®Ç°)
+//ç°åœ¨backlogç”¨æ¥ç¡®å®šå·²å®Œæˆé˜Ÿåˆ—ï¼ˆå®Œæˆä¸‰æ¬¡æ¡æ‰‹ç­‰å¾…acceptï¼‰çš„é•¿åº¦ï¼Œè€Œä¸å†æ˜¯å·²å®Œæˆé˜Ÿåˆ—å’Œæœªå®Œæˆè¿æ¥é˜Ÿåˆ—ä¹‹å’Œï¼ˆlinux 2.2ä¹‹å‰)
 SYSCALL_DEFINE2(listen, int, fd, int, backlog)
 {
 	struct socket *sock;
 	int err, fput_needed;
 	int somaxconn;
 	
-	//¸ù¾İÎÄ¼şÃèÊö·û»ñµÃfile¶ÔÏó,È»ºó´Óprivate_data³ÉÔ±»ñµÃsocket¶ÔÏó
+	//æ ¹æ®æ–‡ä»¶æè¿°ç¬¦è·å¾—fileå¯¹è±¡,ç„¶åä»private_dataæˆå‘˜è·å¾—socketå¯¹è±¡
 	sock = sockfd_lookup_light(fd, &err, &fput_needed);
 	if (sock) {
 		somaxconn = sock_net(sock->sk)->core.sysctl_somaxconn;
@@ -1464,12 +1464,12 @@ SYSCALL_DEFINE2(listen, int, fd, int, backlog)
 
 		err = security_socket_listen(sock, backlog);
 		
-		//Ì×½Ó×ÖÀàĞÍÓëĞ­ÒéµÄ¹ØÁª¶ÔÏóÊı×é¶¨ÒåÔÚinetsw_array,inet_initº¯ÊıÖĞ»á¼ÓÔØµ½inetswÀ­Á´±í
-		//½¨Á¢socket¹ı³ÌÖĞ,ÔÚinet_createÖĞ³õÊ¼»¯ops
-		//¶ÔÓÚÁ÷Ê½Ì×½Ó×Ö,sock->opsÎªinet_stream_ops
-		//listenÎªinet_listen
+		//å¥—æ¥å­—ç±»å‹ä¸åè®®çš„å…³è”å¯¹è±¡æ•°ç»„å®šä¹‰åœ¨inetsw_array,inet_initå‡½æ•°ä¸­ä¼šåŠ è½½åˆ°inetswæ‹‰é“¾è¡¨
+		//å»ºç«‹socketè¿‡ç¨‹ä¸­,åœ¨inet_createä¸­åˆå§‹åŒ–ops
+		//å¯¹äºæµå¼å¥—æ¥å­—,sock->opsä¸ºinet_stream_ops
+		//listenä¸ºinet_listen
 
-		//ÊµÖÊÊÇ¼ÓÈëµ½hashinfo->listening_hash
+		//å®è´¨æ˜¯åŠ å…¥åˆ°hashinfo->listening_hash
 		if (!err)
 			err = sock->ops->listen(sock, backlog);
 
@@ -2570,14 +2570,14 @@ static int __init sock_init(void)
 	 *      Initialize skbuff SLAB cache
 	 */
 	 
-	//³õÊ¼»¯skb_buff SLAB cache
+	//åˆå§‹åŒ–skb_buff SLAB cache
 	skb_init();
 
 	/*
 	 *      Initialize the protocols module.
 	 */
 
-    //´´½¨Slab»º´æ,·ÖÅäµ¥Ôª´óĞ¡Îªsizeof(struct socket_alloc)
+    //åˆ›å»ºSlabç¼“å­˜,åˆ†é…å•å…ƒå¤§å°ä¸ºsizeof(struct socket_alloc)
 	init_inodecache();
 
 	err = register_filesystem(&sock_fs_type);
@@ -2585,26 +2585,26 @@ static int __init sock_init(void)
 		goto out_fs;
 	
 	
-	//kern_mountÊµÖÊÎªnamespace.cµÄkern_mount_dataº¯Êı
+	//kern_mountå®è´¨ä¸ºnamespace.cçš„kern_mount_dataå‡½æ•°
 
-	//×îÖÕµ÷ÓÃµÄÊÇvfs_kern_mountº¯Êı
+	//æœ€ç»ˆè°ƒç”¨çš„æ˜¯vfs_kern_mountå‡½æ•°
 
-	//¶ÔÓÚÃ¿Ò»¸ö mount µÄÎÄ¼şÏµÍ³£¬¶¼ÓÉÒ»¸ö vfsmount ½á¹¹À´±íÊ¾¡£¶ÔÓÚÃ¿Ò»¸öÄ¿Â¼Ïî£¬¶¼ÓÃÒ»¸ödentryÀ´±íÊ¾
+	//å¯¹äºæ¯ä¸€ä¸ª mount çš„æ–‡ä»¶ç³»ç»Ÿï¼Œéƒ½ç”±ä¸€ä¸ª vfsmount ç»“æ„æ¥è¡¨ç¤ºã€‚å¯¹äºæ¯ä¸€ä¸ªç›®å½•é¡¹ï¼Œéƒ½ç”¨ä¸€ä¸ªdentryæ¥è¡¨ç¤º
 
-	//sock_mntÊÇ¸övfsmount¶ÔÏó
+	//sock_mntæ˜¯ä¸ªvfsmountå¯¹è±¡
 	
 	/*************************************************************************************************************************************************************/
 
-	//mountµÄ¹ı³Ì¾ÍÊÇ°ÑÉè±¸µÄÎÄ¼şÏµÍ³¼ÓÈëµ½ vfs ¿ò¼ÜÖĞ
+	//mountçš„è¿‡ç¨‹å°±æ˜¯æŠŠè®¾å¤‡çš„æ–‡ä»¶ç³»ç»ŸåŠ å…¥åˆ° vfs æ¡†æ¶ä¸­
 
-	//1. Ê×ÏÈ£¬ÒªmountÒ»¸öĞÂµÄÉè±¸£¬ĞèÒª´´½¨Ò»¸öĞÂµÄ super block¡£ ÕâÍ¨¹ıÒªmountµÄÎÄ¼şÏµÍ³µÄ file_system_type£¬ µ÷ÓÃÆä get_sb ·½·¨À´´´½¨Ò»¸öĞÂµÄ super block¡£
+	//1. é¦–å…ˆï¼Œè¦mountä¸€ä¸ªæ–°çš„è®¾å¤‡ï¼Œéœ€è¦åˆ›å»ºä¸€ä¸ªæ–°çš„ super blockã€‚ è¿™é€šè¿‡è¦mountçš„æ–‡ä»¶ç³»ç»Ÿçš„ file_system_typeï¼Œ è°ƒç”¨å…¶ get_sb æ–¹æ³•æ¥åˆ›å»ºä¸€ä¸ªæ–°çš„ super blockã€‚
 
-	//2. ĞèÒª´´½¨Ò»¸öĞÂµÄvfsmount £¬¶ÔÓÚÈÎºÎÒ»¸ö mount µÄÎÄ¼şÏµÍ³£¬¶¼ÒªÓĞÒ»¸ö vfsmount£¬ ´´½¨Õâ¸övfsmount£¬ ²¢ÉèÖÃºÃvfsmount ÖĞµÄ¸÷¸ö³ÉÔ±
+	//2. éœ€è¦åˆ›å»ºä¸€ä¸ªæ–°çš„vfsmount ï¼Œå¯¹äºä»»ä½•ä¸€ä¸ª mount çš„æ–‡ä»¶ç³»ç»Ÿï¼Œéƒ½è¦æœ‰ä¸€ä¸ª vfsmountï¼Œ åˆ›å»ºè¿™ä¸ªvfsmountï¼Œ å¹¶è®¾ç½®å¥½vfsmount ä¸­çš„å„ä¸ªæˆå‘˜
 
-	//3. ½«´´½¨ºÃµÄ vfsmount ¼ÓÈëµ½ÏµÍ³ÖĞ¡£
+	//3. å°†åˆ›å»ºå¥½çš„ vfsmount åŠ å…¥åˆ°ç³»ç»Ÿä¸­ã€‚
 	/*************************************************************************************************************************************************************/
 	
-	sock_mnt = kern_mount(&sock_fs_type);//¶¨ÒåÔÚ372ĞĞµÄ,vfsmountÀàĞÍ
+	sock_mnt = kern_mount(&sock_fs_type);//å®šä¹‰åœ¨372è¡Œçš„,vfsmountç±»å‹
 	if (IS_ERR(sock_mnt)) {
 		err = PTR_ERR(sock_mnt);
 		goto out_mount;

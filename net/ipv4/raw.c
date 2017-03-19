@@ -912,7 +912,7 @@ static int compat_raw_ioctl(struct sock *sk, unsigned int cmd, unsigned long arg
 }
 #endif
 
-//slabÔÚinet_initÖĞµ÷ÓÃproto_registerÊ±½¨Á¢
+//slabåœ¨inet_initä¸­è°ƒç”¨proto_registeræ—¶å»ºç«‹
 
 struct proto raw_prot = {
 	.name		   = "RAW",

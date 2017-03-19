@@ -3310,9 +3310,9 @@ void __init tcp_init(void)
 
 	if (inet_ehash_locks_alloc(&tcp_hashinfo))
 		panic("TCP: failed to alloc ehash_locks");
-	//ÔÚinet_csk_get_portÓÃµ½
+	//åœ¨inet_csk_get_portç”¨åˆ°
 
-	//Ã¿Ò»Ïî¶¼ÊÇÒ»¸öÁ´±í£¬´æ´¢ÖµÏàÍ¬µÄtcp_sock(ÕâĞ©sock¿ÉÄÜÊÇ¶Ë¿Ú¸´ÓÃµÄ)¡£
+	//æ¯ä¸€é¡¹éƒ½æ˜¯ä¸€ä¸ªé“¾è¡¨ï¼Œå­˜å‚¨å€¼ç›¸åŒçš„tcp_sock(è¿™äº›sockå¯èƒ½æ˜¯ç«¯å£å¤ç”¨çš„)ã€‚
 	tcp_hashinfo.bhash =
 		alloc_large_system_hash("TCP bind",
 					sizeof(struct inet_bind_hashbucket),
@@ -3324,7 +3324,7 @@ void __init tcp_init(void)
 					0,
 					64 * 1024);
 	
-	tcp_hashinfo.bhash_size = 1U << tcp_hashinfo.bhash_size;//Êı×éµÄ³¤¶È
+	tcp_hashinfo.bhash_size = 1U << tcp_hashinfo.bhash_size;//æ•°ç»„çš„é•¿åº¦
 	for (i = 0; i < tcp_hashinfo.bhash_size; i++) {
 		spin_lock_init(&tcp_hashinfo.bhash[i].lock);
 		INIT_HLIST_HEAD(&tcp_hashinfo.bhash[i].chain);

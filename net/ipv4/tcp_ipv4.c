@@ -91,7 +91,7 @@ int sysctl_tcp_low_latency __read_mostly;
 static int tcp_v4_md5_hash_hdr(char *md5_hash, const struct tcp_md5sig_key *key,
 			       __be32 daddr, __be32 saddr, const struct tcphdr *th);
 #endif
-//ÔÚtcp_init³õÊ¼»¯
+//åœ¨tcp_initåˆå§‹åŒ–
 struct inet_hashinfo tcp_hashinfo;
 EXPORT_SYMBOL(tcp_hashinfo);
 
@@ -2360,7 +2360,7 @@ void tcp4_proc_exit(void)
 #endif /* CONFIG_PROC_FS */
 
 
-//slabÔÚinet_initÖĞµ÷ÓÃproto_registerÊ±½¨Á¢
+//slabåœ¨inet_initä¸­è°ƒç”¨proto_registeræ—¶å»ºç«‹
 struct proto tcp_prot = {
 	.name			= "TCP",
 	.owner			= THIS_MODULE,
