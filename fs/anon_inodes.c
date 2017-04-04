@@ -98,16 +98,24 @@ struct file *anon_inode_getfile(const char *name,
 	 * We know the anon_inode inode count is always greater than zero,
 	 * so ihold() is safe.
 	 */
-	ihold(anon_inode_inode);
 
+	//增加匿名inode的引用计数
+	
+	ihold(anon_inode_inode);
 	d_instantiate(path.dentry, anon_inode_inode);
 
+    //构建file对象，同时将 eventpoll_fops 挂到file对象的f_op上
+
+	//eventpoll_fops是没有实现read/write等函数的，所以调read/write等函数操作epoll文件会出错
+	
 	file = alloc_file(&path, OPEN_FMODE(flags), fops);
 	if (IS_ERR(file))
 		goto err_dput;
 	file->f_mapping = anon_inode_inode->i_mapping;
 
 	file->f_flags = flags & (O_ACCMODE | O_NONBLOCK);
+	
+	//目的是通过file找到对应的eventpoll对象
 	file->private_data = priv;
 
 	return file;

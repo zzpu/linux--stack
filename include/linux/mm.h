@@ -2148,6 +2148,7 @@ extern struct vm_area_struct * find_vma_prev(struct mm_struct * mm, unsigned lon
    NULL if none.  Assume start_addr < end_addr. */
 static inline struct vm_area_struct * find_vma_intersection(struct mm_struct * mm, unsigned long start_addr, unsigned long end_addr)
 {
+    //指定的地址空间中搜"第一个大于addr的内存区域
 	struct vm_area_struct * vma = find_vma(mm,start_addr);
 
 	if (vma && end_addr <= vma->vm_start)

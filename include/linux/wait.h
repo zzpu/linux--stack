@@ -170,6 +170,7 @@ static inline void __add_wait_queue(wait_queue_head_t *head, wait_queue_t *new)
 /*
  * Used for wake-one threads:
  */
+ //专用的; 高级的; 排外的; 单独的
 static inline void
 __add_wait_queue_exclusive(wait_queue_head_t *q, wait_queue_t *wait)
 {

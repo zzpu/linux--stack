@@ -124,10 +124,10 @@ void __init ipc_init_proc_interface(const char *path, const char *header,
 	iface = kmalloc(sizeof(*iface), GFP_KERNEL);
 	if (!iface)
 		return;
-	iface->path	= path;
-	iface->header	= header;
-	iface->ids	= ids;
-	iface->show	= show;
+	iface->path	= path;       //proc路径
+	iface->header	= header; //显示列表头
+	iface->ids	= ids;        //
+	iface->show	= show;       //显示函数
 
 	pde = proc_create_data(path,
 			       S_IRUGO,        /* world readable */
@@ -337,6 +337,14 @@ static int ipc_check_perms(struct ipc_namespace *ns,
 static int ipcget_public(struct ipc_namespace *ns, struct ipc_ids *ids,
 		const struct ipc_ops *ops, struct ipc_params *params)
 {
+
+//   static const struct ipc_ops shm_ops = {
+//	   .getnew = newseg,
+//	   .associate = shm_security,
+//	   .more_checks = shm_more_checks,
+//   };
+
+
 	struct kern_ipc_perm *ipcp;
 	int flg = params->flg;
 	int err;
@@ -346,12 +354,17 @@ static int ipcget_public(struct ipc_namespace *ns, struct ipc_ids *ids,
 	 * a new entry + read locks are not "upgradable"
 	 */
 	down_write(&ids->rwsem);
+	
+	//查找看是否有对应的共享内存区块
 	ipcp = ipc_findkey(ids, params->key);
+	
+	// 如果不存则建立
 	if (ipcp == NULL) {
 		/* key not used */
 		if (!(flg & IPC_CREAT))
 			err = -ENOENT;
 		else
+			// newseg
 			err = ops->getnew(ns, params);
 	} else {
 		/* ipc object has been locked by ipc_findkey() */
@@ -635,8 +648,10 @@ out:
 int ipcget(struct ipc_namespace *ns, struct ipc_ids *ids,
 			const struct ipc_ops *ops, struct ipc_params *params)
 {
+    //传入0？
 	if (params->key == IPC_PRIVATE)
 		return ipcget_new(ns, ids, ops, params);
+	//传入非0
 	else
 		return ipcget_public(ns, ids, ops, params);
 }

@@ -1112,17 +1112,20 @@ struct dentry *mount_nodev(struct file_system_type *fs_type,
 	int (*fill_super)(struct super_block *, void *, int))
 {
 	int error;
+	// alloc_super 分配
 	struct super_block *s = sget(fs_type, NULL, set_anon_super, flags, NULL);
 
 	if (IS_ERR(s))
 		return ERR_CAST(s);
 
+    // shmem_fill_super
 	error = fill_super(s, data, flags & MS_SILENT ? 1 : 0);
 	if (error) {
 		deactivate_locked_super(s);
 		return ERR_PTR(error);
 	}
 	s->s_flags |= MS_ACTIVE;
+	//增加引用计数
 	return dget(s->s_root);
 }
 EXPORT_SYMBOL(mount_nodev);

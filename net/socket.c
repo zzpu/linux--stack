@@ -246,8 +246,12 @@ static struct inode *sock_alloc_inode(struct super_block *sb)
 {
 	struct socket_alloc *ei;
 	struct socket_wq *wq;
+	//sock_inode_cachep在 init_inodecache 中初始化
 	
-    //sock_inode_cachep就是类型kmem_cache的对象
+    // sock_inode_cachep 就是类型 kmem_cache 的对象
+
+	//分配内存单元大小为sizeof(struct socket_alloc)
+	
 	ei = kmem_cache_alloc(sock_inode_cachep, GFP_KERNEL);
 	if (!ei)
 		return NULL;
@@ -562,9 +566,9 @@ struct socket *sock_alloc(void)
     
     //定义在372行的,vfsmount类型
     
-    //初始化在sock_init函数
+    //初始化在 sock_init 函数
 
-	 //最终调用sock_alloc_inode
+	 //最终调用 sock_alloc_inode
 	inode = new_inode_pseudo(sock_mnt->mnt_sb);
 	if (!inode)
 		return NULL;

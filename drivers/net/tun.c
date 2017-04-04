@@ -191,11 +191,11 @@ struct tun_flow_entry {
 struct tun_struct {
 	struct tun_file __rcu	*tfiles[MAX_TAP_QUEUES];
 	unsigned int            numqueues;
-	unsigned int 		flags;
+	unsigned int 		flags;    //区分tun或tap设备  
 	kuid_t			owner;
 	kgid_t			group;
 
-	struct net_device	*dev;
+	struct net_device	*dev;    //对应的网络设备结构  
 	netdev_features_t	set_features;
 #define TUN_USER_FEATURES (NETIF_F_HW_CSUM|NETIF_F_TSO_ECN|NETIF_F_TSO| \
 			  NETIF_F_TSO6|NETIF_F_UFO)
@@ -2522,7 +2522,10 @@ static int __init tun_init(void)
 		pr_err("Can't register link_ops\n");
 		goto err_linkops;
 	}
+	
+    //调用杂项设备注册函数misc_register注册一个名为tun的字符设备，并提供包括open、close、read、write等在内的一系列标准接口
 
+	//操作集为 tun_fops
 	ret = misc_register(&tun_miscdev);
 	if (ret) {
 		pr_err("Can't register misc device %d\n", TUN_MINOR);

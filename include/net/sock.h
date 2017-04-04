@@ -1265,7 +1265,7 @@ struct socket_alloc {
 
 static inline struct socket *SOCKET_I(struct inode *inode)
 {   
-    //根据一个结构体变量中的一个域成员变量的指针来获取指向整个结构体变量的指针
+    //
 	return &container_of(inode, struct socket_alloc, vfs_inode)->socket;
 }
 

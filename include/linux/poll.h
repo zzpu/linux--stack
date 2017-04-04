@@ -41,6 +41,9 @@ typedef struct poll_table_struct {
 
 static inline void poll_wait(struct file * filp, wait_queue_head_t * wait_address, poll_table *p)
 {
+    //最终 poll_wait 会调 ep_ptable_queue_proc
+    
+    //wait_address是socket的等待队列
 	if (p && p->_qproc && wait_address)
 		p->_qproc(filp, wait_address, p);
 }

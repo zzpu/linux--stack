@@ -118,6 +118,7 @@ pure_initcall(ipc_ns_init);
 
 void __init shm_init(void)
 {
+	//建立proc文件节点
 	ipc_init_proc_interface("sysvipc/shm",
 #if BITS_PER_LONG <= 32
 				"       key      shmid perms       size  cpid  lpid nattch   uid   gid  cuid  cgid      atime      dtime      ctime        rss       swap\n",
@@ -516,6 +517,16 @@ static const struct vm_operations_struct shm_vm_ops = {
  *
  * Called with shm_ids.rwsem held as a writer.
  */
+
+//建立新的共享内存段
+
+//1.参数及共享内存系统限制检查
+//2.分配共享内存管理结构 shmid_kernel
+//3.在tmpfs中创建共享内存文件，以获取物理内存
+//4.将shmid_kernel添加到共享内存基数树中，并获得基数树id
+//5.初始化shmid_kernel结构
+//6.返回共享内存IPC id
+
 static int newseg(struct ipc_namespace *ns, struct ipc_params *params)
 {
 	key_t key = params->key;
@@ -539,6 +550,8 @@ static int newseg(struct ipc_namespace *ns, struct ipc_params *params)
 			ns->shm_tot + numpages > ns->shm_ctlall)
 		return -ENOSPC;
 
+    //为shmid_kernel对象分配内存
+    //从slab中分配内存
 	shp = ipc_rcu_alloc(sizeof(*shp));
 	if (!shp)
 		return -ENOMEM;
@@ -580,6 +593,9 @@ static int newseg(struct ipc_namespace *ns, struct ipc_params *params)
 		if  ((shmflg & SHM_NORESERVE) &&
 				sysctl_overcommit_memory != OVERCOMMIT_NEVER)
 			acctflag = VM_NORESERVE;
+		//在shm的tempfs中创建一个文件inode节点，并返回一个文件描述符，文件存在哪个路径了呢？？是个隐藏文件，用户空间看不到！！
+
+		// shmem_ops
 		file = shmem_kernel_file_setup(name, size, acctflag);
 	}
 	error = PTR_ERR(file);
@@ -1143,6 +1159,8 @@ long do_shmat(int shmid, char __user *shmaddr, int shmflg, ulong *raddr,
 	 */
 	ns = current->nsproxy->ipc_ns;
 	rcu_read_lock();
+	
+	//得到shmid_kernel对象
 	shp = shm_obtain_object_check(ns, shmid);
 	if (IS_ERR(shp)) {
 		err = PTR_ERR(shp);
@@ -1168,6 +1186,7 @@ long do_shmat(int shmid, char __user *shmaddr, int shmflg, ulong *raddr,
 
 	path = shp->shm_file->f_path;
 	path_get(&path);
+	// 共享内存引用计数自增
 	shp->shm_nattch++;
 	size = i_size_read(d_inode(path.dentry));
 	ipc_unlock_object(&shp->shm_perm);
@@ -1180,6 +1199,7 @@ long do_shmat(int shmid, char __user *shmaddr, int shmflg, ulong *raddr,
 		goto out_nattch;
 	}
 
+    //为什么还要分配file对象
 	file = alloc_file(&path, f_mode,
 			  is_file_hugepages(shp->shm_file) ?
 				&shm_file_operations_huge :
@@ -1215,7 +1235,8 @@ long do_shmat(int shmid, char __user *shmaddr, int shmflg, ulong *raddr,
 		if (find_vma_intersection(current->mm, addr, addr + size))
 			goto invalid;
 	}
-
+	
+	//最后进行内存映射，完成attach操作
 	addr = do_mmap_pgoff(file, addr, size, prot, flags, 0, &populate);
 	*raddr = addr;
 	err = 0;
