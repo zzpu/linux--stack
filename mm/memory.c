@@ -896,6 +896,8 @@ copy_one_pte(struct mm_struct *dst_mm, struct mm_struct *src_mm,
 	 * If it's a COW mapping, write protect it both
 	 * in the parent and the child
 	 */
+	 
+	//这里便是判断如果采用的是写时复制，便将父子页均置为写保护，即会产生如下所示的缺页异常。
 	if (is_cow_mapping(vm_flags)) {
 		ptep_set_wrprotect(src_mm, addr, src_pte);
 		pte = pte_wrprotect(pte);
@@ -1088,8 +1090,15 @@ int copy_page_range(struct mm_struct *dst_mm, struct mm_struct *src_mm,
 						    mmun_end);
 
 	ret = 0;
+	//取得pgd
 	dst_pgd = pgd_offset(dst_mm, addr);
+
+	//取得pgd
 	src_pgd = pgd_offset(src_mm, addr);
+
+	//copy_pud_range便是拷贝pud表，copy_pud_range调用copy_pmd_range, copy_pmd_range调用copy_pte_range
+	
+	//以此完成对三级页表的复制。需要注意的是在copy_pte_range调用的copy_one_pte
 	do {
 		next = pgd_addr_end(addr, end);
 		if (pgd_none_or_clear_bad(src_pgd))
@@ -3620,6 +3629,9 @@ static int __handle_mm_fault(struct vm_area_struct *vma, unsigned long address,
  * The mmap_sem may have been released depending on flags and our
  * return value.  See filemap_fault() and __lock_page_or_retry().
  */
+
+//在缺页异常中，会按照地址一次查三张页表，如果页表为invalide，比如invalide_pmd_table或invalide_pte_table，
+//则会分配一个新的页表项取代invalide的页表项。这便是页表扩充的机制。
 int handle_mm_fault(struct vm_area_struct *vma, unsigned long address,
 		unsigned int flags)
 {

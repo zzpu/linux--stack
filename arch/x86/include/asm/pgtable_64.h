@@ -22,6 +22,9 @@ extern pmd_t level2_ident_pgt[512];
 extern pte_t level1_fixmap_pgt[512];
 extern pgd_t init_level4_pgt[];
 
+
+//创建一个新进程的时候，需要为它分配一个 page，作为页目录表，并将 swapper_pg_dir[] 的高 256 项拷贝过来，低 768 项则清0
+
 #define swapper_pg_dir init_level4_pgt
 
 extern void paging_init(void);

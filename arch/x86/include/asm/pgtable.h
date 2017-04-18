@@ -901,6 +901,45 @@ static inline void pmdp_set_wrprotect(struct mm_struct *mm,
  * dst and src can be on the same page, but the range must not overlap,
  * and must not cross a page boundary.
  */
+						  
+
+//第一个参数：
+//
+//pgd + KERNEL_PGD_BOUNDARY
+//pgd是分配得到的页目录的基地址，经过跟踪计算KERNEL_PGD_BOUNDARY=768，也就是指向pgd的第768项，这个项目正好是内核空间的开始。
+//第二个参数：
+//
+//
+//swapper_pg_dir + KERNEL_PGD_BOUNDARY,
+//
+//首先来看一下swapper_pg_dir是什么？（详细的解释请参看：http://blog.csdn.NET/sunnybeike/article/details/6897819）
+//
+//swapper_pg_dir这个东西其实就是一个页目录的指针。swapper_pg_dir只是在内核初始化的时候被载入到cr3指示内存映射信息，
+
+//之在init进程启动后就成了idle内核线程的页目录指针了，/sbin/init由一个叫做init的内核线程exec而成，而init内核线程是
+
+//原始的内核也就是后来的idle线程do_fork而成的，而在do_fork中会为新生的进程重启分配一个页目录指针，
+
+//由此可见swapper_pg_dir只是在idle和内核线程中被使用，可是它的作用却不只是为idle进程指示内存映射信息，
+
+//更多的，它作为一个内核空间的内存映射模板而存在，在Linux中，任何进程在内核空间就不分彼此了，
+
+//所有的进程都会公用一份内核空间的内存映射，因此，内核空间是所有进程共享的，每当一个新的进程建立的时候，
+
+//都会将swapper_pg_dir的768项以后的信息全部复制到新进程页目录的768项以后，代表内核空间。另外在操作3G+896M以上的虚拟内存时，
+
+//只会更改swapper_pg_dir的映射信息，当别的进程访问到这些页面的时候会发生缺页，在缺页处理中会与swapper_pg_dir同步。
+//
+//因此第二个参数指向的是页目录表模板的第768项，也就是指向指向内核空间的页目录项。
+//
+//第三个参数：
+//
+//KERNEL_PGD_PTRS
+//
+//
+//顾名思义，是表示内核目录项的个数。
+//
+//因此，整个clone_pgd_range就是将初始化页表的内核空间。
 static inline void clone_pgd_range(pgd_t *dst, pgd_t *src, int count)
 {
        memcpy(dst, src, count * sizeof(pgd_t));

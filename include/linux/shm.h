@@ -5,13 +5,21 @@
 #include <asm/page.h>
 #include <uapi/linux/shm.h>
 #include <asm/shmparam.h>
+//该数据结构中最重要的部分就是shm_file这个字段。它指向了共享内存对应的文件。在该结构中有一个字段，f_mapping，
+
+//它指向了该内存段使用的页面（物理内存）。同时，结构中，也包含一个字段，f_path，用于指向文件系统中的文件(dentry->inode)，
+
+//这样就建立了物理内存和文件系统的桥梁。当进程需要创建或者attach共享内存的时候，在用户态，会先向虚拟内存系统申请各自的vma_struct，
+
+//并将其插入到各自任务的红黑树中，该结构中有一个成员vm_file，它指向的就是struct file(shm_file)。这样虚拟内存、共享内存（文件系统）和物理内存就建立了连接。
+
 
 struct shmid_kernel /* private to the kernel */
 {	
-	struct kern_ipc_perm	shm_perm;
-	struct file		*shm_file;
-	unsigned long		shm_nattch;
-	unsigned long		shm_segsz;
+	struct kern_ipc_perm	shm_perm;		 // 访问权限的信息
+	struct file		*shm_file;			 	 // 指向虚拟文件系统的指针
+	unsigned long		shm_nattch;			 // 有多少个进程attach上了这个共享内存段
+	unsigned long		shm_segsz;			 // 共享内存段大小
 	time_t			shm_atim;
 	time_t			shm_dtim;
 	time_t			shm_ctim;

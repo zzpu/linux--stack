@@ -608,7 +608,10 @@ static int newseg(struct ipc_namespace *ns, struct ipc_params *params)
 	shp->shm_ctim = get_seconds();
 	shp->shm_segsz = size;
 	shp->shm_nattch = 0;
+	
+	//它指向了共享内存对应的文件。在该结构中有一个字段，f_mapping，它指向了该内存段使用的页面（物理内存）
 	shp->shm_file = file;
+	
 	shp->shm_creator = current;
 
 	id = ipc_addid(&shm_ids(ns), &shp->shm_perm, ns->shm_ctlmni);
@@ -666,7 +669,7 @@ static inline int shm_more_checks(struct kern_ipc_perm *ipcp,
 
 	return 0;
 }
-
+//返回共享内存IPC id
 SYSCALL_DEFINE3(shmget, key_t, key, size_t, size, int, shmflg)
 {
 	struct ipc_namespace *ns;
@@ -1161,6 +1164,10 @@ long do_shmat(int shmid, char __user *shmaddr, int shmflg, ulong *raddr,
 	rcu_read_lock();
 	
 	//得到shmid_kernel对象
+	
+	//该数据结构中最重要的部分就是shm_file这个字段。它指向了共享内存对应的文件。在该结构中有一个字段，f_mapping，
+
+	//它指向了该内存段使用的页面（物理内存）
 	shp = shm_obtain_object_check(ns, shmid);
 	if (IS_ERR(shp)) {
 		err = PTR_ERR(shp);
@@ -1186,20 +1193,23 @@ long do_shmat(int shmid, char __user *shmaddr, int shmflg, ulong *raddr,
 
 	path = shp->shm_file->f_path;
 	path_get(&path);
-	// 共享内存引用计数自增
+	
+	//共享内存引用计数自增
 	shp->shm_nattch++;
 	size = i_size_read(d_inode(path.dentry));
 	ipc_unlock_object(&shp->shm_perm);
 	rcu_read_unlock();
 
 	err = -ENOMEM;
+
+	// 从slab分配其中分配shm_file_data数据结构
 	sfd = kzalloc(sizeof(*sfd), GFP_KERNEL);
 	if (!sfd) {
 		path_put(&path);
 		goto out_nattch;
 	}
 
-    //为什么还要分配file对象
+    //为什么还要分配file对象?
 	file = alloc_file(&path, f_mode,
 			  is_file_hugepages(shp->shm_file) ?
 				&shm_file_operations_huge :
@@ -1212,7 +1222,9 @@ long do_shmat(int shmid, char __user *shmaddr, int shmflg, ulong *raddr,
 	}
 
 	file->private_data = sfd;
+	//
 	file->f_mapping = shp->shm_file->f_mapping;
+	
 	sfd->id = shp->shm_perm.id;
 	sfd->ns = get_ipc_ns(ns);
 	sfd->file = shp->shm_file;

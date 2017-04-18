@@ -847,6 +847,8 @@ dump_kernel_offset(struct notifier_block *self, unsigned long v, void *p)
  *
  * Note: On x86_64, fixmaps are ready for use even before this is called.
  */
+ 
+//start_kernel -->	setup_arch	(1130) --> init_mem_mapping
 
 void __init setup_arch(char **cmdline_p)
 {
@@ -1126,6 +1128,8 @@ void __init setup_arch(char **cmdline_p)
 
 	trim_platform_memory_ranges();
 	trim_low_memory_range();
+   
+	//start_kernel -->	setup_arch	--> init_mem_mapping  --> init_memory_mapping
 
 	init_mem_mapping();
 

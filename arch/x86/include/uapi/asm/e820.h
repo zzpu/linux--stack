@@ -55,6 +55,18 @@
 
 #ifndef __ASSEMBLY__
 #include <linux/types.h>
+
+
+//addr:该内存段的起始地址
+
+//size:该内存段的大小
+
+//type:该内存段的类型，可分为Usable (normal) RAM，Reserved - unusable，ACPI reclaimable memory，ACPI NVS memory，Area containing bad memory，
+
+//要获取所有的内存段的信息，detect_memory_e820()通过一个do_while循环来不断触发int 0x15中断来获取每个内存段的信息，并且将这些信息保存在一个
+
+//struct e820entry类型的数组中，即boot_params.e820_map
+
 struct e820entry {
 	__u64 addr;	/* start of memory segment */
 	__u64 size;	/* size of memory segment */

@@ -1221,8 +1221,9 @@ __do_page_fault(struct pt_regs *regs, unsigned long error_code,
 	int fault, major = 0;
 	unsigned int flags = FAULT_FLAG_ALLOW_RETRY | FAULT_FLAG_KILLABLE;
 
-	tsk = current;
-	mm = tsk->mm;
+	tsk = current;			//获取当前进程
+	
+	mm = tsk->mm;			//获取当前进程的地址空间  
 
 	/*
 	 * Detect and handle instructions that would cause a page fault for
@@ -1231,6 +1232,8 @@ __do_page_fault(struct pt_regs *regs, unsigned long error_code,
 	if (kmemcheck_active(regs))
 		kmemcheck_hide(regs);
 	prefetchw(&mm->mmap_sem);
+
+	// address 在 do_page_fault 函数中获取
 
 	if (unlikely(kmmio_fault(regs, address)))
 		return;
@@ -1248,8 +1251,26 @@ __do_page_fault(struct pt_regs *regs, unsigned long error_code,
 	 * (error_code & 4) == 0, and that the fault was not a
 	 * protection error (error_code & 9) == 0.
 	 */
+
+	 //判断address是否处于内核线性地址空间  
+	 
 	if (unlikely(fault_in_kernel_space(address))) {
+
+		/* 
+		 * Page fault error code bits: 
+		 * 
+		 *	 bit 0 ==	 0: no page found	1: protection fault 
+		 *	 bit 1 ==	 0: read access 	1: write access 
+		 *	 bit 2 ==	 0: kernel-mode access	1: user-mode access 
+		 *	 bit 3 ==				1: use of reserved bit detected 
+		 *	 bit 4 ==				1: fault was an instruction fetch 
+		 */  
+
+
+	    //判断是否处于内核态  
 		if (!(error_code & (PF_RSVD | PF_USER | PF_PROT))) {
+			
+			//处理vmalloc异常  
 			if (vmalloc_fault(address) >= 0)
 				return;
 
@@ -1258,6 +1279,10 @@ __do_page_fault(struct pt_regs *regs, unsigned long error_code,
 		}
 
 		/* Can handle a stale RO->RW TLB: */
+//
+//		异常发生在内核地址空间但不属于上面的情况或上面的方式无法修正， 
+
+//      则检查相应的页表项是否存在，权限是否足够
 		if (spurious_fault(error_code, address))
 			return;
 
@@ -1394,6 +1419,11 @@ good_area:
 	 * the fault.  Since we never set FAULT_FLAG_RETRY_NOWAIT, if
 	 * we get VM_FAULT_RETRY back, the mmap_sem has been unlocked.
 	 */
+
+	//handle_mm_fault是公共代码，一般所有的缺页异常均会调用
+	
+	//分配物理内存，缺页异常的正常处理主函数
+	//可能的情况有:1、请求调页/按需分配；2、COW；3、缺的页位于交换分区，需要换入。
 	fault = handle_mm_fault(vma, address, flags);
 	major |= fault & VM_FAULT_MAJOR;
 
@@ -1445,7 +1475,10 @@ NOKPROBE_SYMBOL(__do_page_fault);
 dotraplinkage void notrace
 do_page_fault(struct pt_regs *regs, unsigned long error_code)
 {
+
+	//读取CR2寄存器获取触发异常的访问地址  
 	unsigned long address = read_cr2(); /* Get the faulting address */
+	
 	enum ctx_state prev_state;
 
 	/*
@@ -1457,6 +1490,7 @@ do_page_fault(struct pt_regs *regs, unsigned long error_code)
 	 */
 
 	prev_state = exception_enter();
+	
 	__do_page_fault(regs, error_code, address);
 	exception_exit(prev_state);
 }

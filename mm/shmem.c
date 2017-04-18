@@ -1954,6 +1954,8 @@ unsigned long shmem_get_unmapped_area(struct file *file,
 	if (len > TASK_SIZE)
 		return -ENOMEM;
 
+	// get_unmapped_area  -->  arch_get_unmapped_area
+
 	get_area = current->mm->get_unmapped_area;
 	addr = get_area(file, uaddr, len, pgoff, flags);
 
@@ -2081,7 +2083,7 @@ static int shmem_mmap(struct file *file, struct vm_area_struct *vma)
 	}
 	return 0;
 }
-
+//这个是定义了CONFIG_SHMEM实现函数
 static struct inode *shmem_get_inode(struct super_block *sb, const struct inode *dir,
 				     umode_t mode, dev_t dev, unsigned long flags)
 {
@@ -2092,6 +2094,10 @@ static struct inode *shmem_get_inode(struct super_block *sb, const struct inode 
 	if (shmem_reserve_inode(sb))
 		return NULL;
 
+
+    //分配的是 shmem_inode_info 类型的 inode
+
+	// shmem_alloc_inode
 	inode = new_inode(sb);
 	if (inode) {
 		inode->i_ino = get_next_ino();
@@ -2099,7 +2105,11 @@ static struct inode *shmem_get_inode(struct super_block *sb, const struct inode 
 		inode->i_blocks = 0;
 		inode->i_atime = inode->i_mtime = inode->i_ctime = current_time(inode);
 		inode->i_generation = get_seconds();
+
+		//得到 shmem_inode_info 对象
 		info = SHMEM_I(inode);
+
+		//初始化 shmem_inode_info 对象
 		memset(info, 0, (char *)inode - (char *)info);
 		spin_lock_init(&info->lock);
 		info->seals = F_SEAL_SEAL;
@@ -2110,10 +2120,12 @@ static struct inode *shmem_get_inode(struct super_block *sb, const struct inode 
 		cache_no_acl(inode);
 
 		switch (mode & S_IFMT) {
+		//处理特殊的inode，包括socket、fifo、块设备、字符设备
 		default:
 			inode->i_op = &shmem_special_inode_operations;
 			init_special_inode(inode, mode, dev);
 			break;
+		//普通文件，注册回调函数
 		case S_IFREG:
 			inode->i_mapping->a_ops = &shmem_aops;
 			inode->i_op = &shmem_inode_operations;
@@ -2121,6 +2133,8 @@ static struct inode *shmem_get_inode(struct super_block *sb, const struct inode 
 			mpol_shared_policy_init(&info->policy,
 						 shmem_get_sbmpol(sbinfo));
 			break;
+
+		//目录，注册回调函数
 		case S_IFDIR:
 			inc_nlink(inode);
 			/* Some things misbehave if size == 0 on a directory */
@@ -2128,6 +2142,8 @@ static struct inode *shmem_get_inode(struct super_block *sb, const struct inode 
 			inode->i_op = &shmem_dir_inode_operations;
 			inode->i_fop = &simple_dir_operations;
 			break;
+
+		//增加文件引用计数即inode->i_nlink，目录的引用计数为2，因为包括了"."  当inode->i_nlink为0时，说明这个inode闲置 		
 		case S_IFLNK:
 			/*
 			 * Must not load anything in the rbtree,
@@ -3541,7 +3557,7 @@ static void shmem_put_super(struct super_block *sb)
 	kfree(sbinfo);
 	sb->s_fs_info = NULL;
 }
-
+//这里会填充sb->s_root
 int shmem_fill_super(struct super_block *sb, void *data, int silent)
 {
 	struct inode *inode;
@@ -3592,6 +3608,8 @@ int shmem_fill_super(struct super_block *sb, void *data, int silent)
 	sb->s_blocksize = PAGE_SIZE;
 	sb->s_blocksize_bits = PAGE_SHIFT;
 	sb->s_magic = TMPFS_MAGIC;
+	
+	//超级块操作函数集
 	sb->s_op = &shmem_ops;
 	sb->s_time_gran = 1;
 #ifdef CONFIG_TMPFS_XATTR
@@ -3606,6 +3624,7 @@ int shmem_fill_super(struct super_block *sb, void *data, int silent)
 		goto failed;
 	inode->i_uid = sbinfo->uid;
 	inode->i_gid = sbinfo->gid;
+	//
 	sb->s_root = d_make_root(inode);
 	if (!sb->s_root)
 		goto failed;
@@ -3621,6 +3640,8 @@ static struct kmem_cache *shmem_inode_cachep;
 static struct inode *shmem_alloc_inode(struct super_block *sb)
 {
 	struct shmem_inode_info *info;
+
+	//分配单元为 shmem_inode_info
 	info = kmem_cache_alloc(shmem_inode_cachep, GFP_KERNEL);
 	if (!info)
 		return NULL;
@@ -3758,9 +3779,14 @@ static const struct vm_operations_struct shmem_vm_ops = {
 static struct dentry *shmem_mount(struct file_system_type *fs_type,
 	int flags, const char *dev_name, void *data)
 {
+    //调 alloc_super 分配一个 super_block
+
+	//超级块的操作函数集为 shmem_ops
+
+	// shmem_fill_super 填充 sb->s_root , 包含超级块函数操作集
 	return mount_nodev(fs_type, flags, data, shmem_fill_super);
 }
-
+//3915 有一个
 static struct file_system_type shmem_fs_type = {
 	.owner		= THIS_MODULE,
 	.name		= "tmpfs",
@@ -3787,6 +3813,11 @@ int __init shmem_init(void)
 		goto out2;
 	}
 
+    // vfs_kern_mount --> mount_fs -->  (shmem_fs_type  --> mount)
+    
+    //是vfsmount* 对象
+
+	// alloc_super 分配
 	shm_mnt = kern_mount(&shmem_fs_type);
 	if (IS_ERR(shm_mnt)) {
 		error = PTR_ERR(shm_mnt);
@@ -3908,7 +3939,7 @@ bool shmem_huge_enabled(struct vm_area_struct *vma)
  * their complexity. On systems without swap this code should be
  * effectively equivalent, but much lighter weight.
  */
-
+//3764 有一个
 static struct file_system_type shmem_fs_type = {
 	.name		= "tmpfs",
 	.mount		= ramfs_mount,
@@ -3961,14 +3992,14 @@ EXPORT_SYMBOL_GPL(shmem_truncate_range);
 #define shmem_acct_size(flags, size)		0
 #define shmem_unacct_size(flags, size)		do {} while (0)
 
-#endif /* CONFIG_SHMEM */
+#endif /* CONFIG_SHMEM  3901*/
 
 /* common code */
 
 static const struct dentry_operations anon_ops = {
 	.d_dname = simple_dname
 };
-
+//name for dentry (to be seen in /proc/<pid>/maps
 static struct file *__shmem_file_setup(const char *name, loff_t size,
 				       unsigned long flags, unsigned int i_flags)
 {
@@ -3993,26 +4024,45 @@ static struct file *__shmem_file_setup(const char *name, loff_t size,
 	this.hash = 0; /* will go */
 	sb = shm_mnt->mnt_sb;
 	path.mnt = mntget(shm_mnt);
+	
+	//虚拟的目录
+
+	//在shm所mount文件系统根目录下创建dentry节点
 	path.dentry = d_alloc_pseudo(sb, &this);
 	if (!path.dentry)
 		goto put_memory;
 	d_set_d_op(path.dentry, &anon_ops);
 
 	res = ERR_PTR(-ENOSPC);
+
+	//分配一个inode对象
+	//无论是否定义了 CONFIG_SHMEM 都会执行 new_inode  -- > alloc_inode   -> ( shmem_ops --> shmem_alloc_inode ) 
+
+	//分配的是 shmem_inode_info 类型的 inode
+	
 	inode = shmem_get_inode(sb, NULL, S_IFREG | S_IRWXUGO, 0, flags);
 	if (!inode)
 		goto put_memory;
 
 	inode->i_flags |= i_flags;
+
+	//将dentry和inode节点关联起来 
 	d_instantiate(path.dentry, inode);
+	//文件大小
 	inode->i_size = size;
 	clear_nlink(inode);	/* It is unlinked */
+
+	//如果配置了MMU则返回0
 	res = ERR_PTR(ramfs_nommu_expand_for_mapping(inode, size));
 	if (IS_ERR(res))
 		goto put_path;
-
+	
+    //构建file对象
+    //分配一个file文件描述符指向该inode节点，并指定该文件操作指针为shmem_file_operations
 	res = alloc_file(&path, FMODE_WRITE | FMODE_READ,
 		  &shmem_file_operations);
+
+		  
 	if (IS_ERR(res))
 		goto put_path;
 
@@ -4037,6 +4087,7 @@ put_path:
  */
 struct file *shmem_kernel_file_setup(const char *name, loff_t size, unsigned long flags)
 {
+    // shmem_ops
 	return __shmem_file_setup(name, size, flags, S_PRIVATE);
 }
 

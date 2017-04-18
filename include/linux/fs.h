@@ -429,23 +429,38 @@ int pagecache_write_end(struct file *, struct address_space *mapping,
 				struct page *page, void *fsdata);
 
 struct address_space {
-	struct inode		*host;		/* owner: inode, block_device */
+	struct inode		*host;		    /* owner: inode, block_device */
+	
 	struct radix_tree_root	page_tree;	/* radix tree of all pages */
-	spinlock_t		tree_lock;	/* and lock protecting it */
-	atomic_t		i_mmap_writable;/* count VM_SHARED mappings */
-	struct rb_root		i_mmap;		/* tree of private and shared mappings */
+	
+	spinlock_t		tree_lock;			/* and lock protecting it */
+	
+	atomic_t		i_mmap_writable;	/* count VM_SHARED mappings */
+	
+	struct rb_root		i_mmap;			/* tree of private and shared mappings */
+	
 	struct rw_semaphore	i_mmap_rwsem;	/* protect tree, count, list */
+	
 	/* Protected by tree_lock together with the radix tree */
-	unsigned long		nrpages;	/* number of total pages */
+	
+	unsigned long		nrpages;		/* number of total pages */
+	
 	/* number of shadow or DAX exceptional entries */
 	unsigned long		nrexceptional;
-	pgoff_t			writeback_index;/* writeback starts here */
+	
+	pgoff_t			writeback_index;	/* writeback starts here */
+	
 	const struct address_space_operations *a_ops;	/* methods */
-	unsigned long		flags;		/* error bits */
-	spinlock_t		private_lock;	/* for use by the address_space */
-	gfp_t			gfp_mask;	/* implicit gfp mask for allocations */
+	
+	unsigned long		flags;			/* error bits */
+	
+	spinlock_t		private_lock;		/* for use by the address_space */
+	
+	gfp_t			gfp_mask;			/* implicit gfp mask for allocations */
+	
 	struct list_head	private_list;	/* ditto */
-	void			*private_data;	/* ditto */
+	
+	void			*private_data;		/* ditto */
 } __attribute__((aligned(sizeof(long))));
 	/*
 	 * On most architectures that alignment is already the case; but
@@ -635,7 +650,7 @@ struct inode {
 		unsigned int __i_nlink;
 	};
 	dev_t			i_rdev;
-	loff_t			i_size;
+	loff_t			i_size;				//文件大小
 	struct timespec		i_atime;
 	struct timespec		i_mtime;
 	struct timespec		i_ctime;
@@ -912,7 +927,9 @@ struct file {
 	struct list_head	f_ep_links;
 	struct list_head	f_tfile_llink;
 #endif /* #ifdef CONFIG_EPOLL */
-	struct address_space	*f_mapping;
+
+	struct address_space	*f_mapping; //它指向了该内存段使用的页面（物理内存）
+
 } __attribute__((aligned(4)));	/* lest something weird decides that 2 is OK */
 
 struct file_handle {

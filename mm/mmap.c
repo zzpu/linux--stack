@@ -1301,6 +1301,13 @@ static inline int mlock_future_check(struct mm_struct *mm,
 /*
  * The caller must hold down_write(&current->mm->mmap_sem).
  */
+
+//参数说明：
+//file  :就是用户层想要映射的file
+//addr  :欲映射的起始地址，即用户层的start
+//prot  :用户层传入的port
+//flag  :同上
+//offset:同上
 unsigned long do_mmap(struct file *file, unsigned long addr,
 			unsigned long len, unsigned long prot,
 			unsigned long flags, vm_flags_t vm_flags,
@@ -1323,7 +1330,9 @@ unsigned long do_mmap(struct file *file, unsigned long addr,
 	if ((prot & PROT_READ) && (current->personality & READ_IMPLIES_EXEC))
 		if (!(file && path_noexec(&file->f_path)))
 			prot |= PROT_EXEC;
+		
 
+	//MAP_FIXED为0，就表示指定的映射地址只是一个参考值，不能满足时可以由内核给分配一个  
 	if (!(flags & MAP_FIXED))
 		addr = round_hint_to_min(addr);
 
@@ -1343,6 +1352,8 @@ unsigned long do_mmap(struct file *file, unsigned long addr,
 	/* Obtain the address to map to. we verify (or select) it and ensure
 	 * that it represents a valid section of the address space.
 	 */
+
+	//当前进程的用户空间中分配一个起始地址  
 	addr = get_unmapped_area(file, addr, len, pgoff, flags);
 	if (offset_in_page(addr))
 		return addr;
@@ -1636,6 +1647,8 @@ unsigned long mmap_region(struct file *file, unsigned long addr,
 	 * specific mapper. the address has already been validated, but
 	 * not unmapped, but the maps are removed from the list.
 	 */
+
+	//映射到一个特定的文件也是一种属性，属性不同的区段不能共存于同一逻辑区间，所以总要为之单独建立一个逻辑区间  
 	vma = kmem_cache_zalloc(vm_area_cachep, GFP_KERNEL);
 	if (!vma) {
 		error = -ENOMEM;
@@ -2061,6 +2074,8 @@ get_unmapped_area(struct file *file, unsigned long addr, unsigned long len,
 		return -ENOMEM;
 
 	get_area = current->mm->get_unmapped_area;
+	
+	// 根据线性地址区间是否应该用于文件内存映射或匿名内存映射
 	if (file) {
 		if (file->f_op->get_unmapped_area)
 			get_area = file->f_op->get_unmapped_area;
@@ -2070,10 +2085,15 @@ get_unmapped_area(struct file *file, unsigned long addr, unsigned long len,
 		 * so use shmem's get_unmapped_area in case it can be huge.
 		 * do_mmap_pgoff() will clear pgoff, so match alignment.
 		 */
+
+		//* 当不是用于文件内存映射或是匿名内存映射，
+		//* 调用current->mm->get_unmapped_area. 
+		//* 即调用arch_get_unmapped_area或arch_get_unmapped_area_topdown
 		pgoff = 0;
 		get_area = shmem_get_unmapped_area;
 	}
 
+	// shmem_get_unmapped_area  -->  arch_get_unmapped_area  
 	addr = get_area(file, addr, len, pgoff, flags);
 	if (IS_ERR_VALUE(addr))
 		return addr;

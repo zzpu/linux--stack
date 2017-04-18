@@ -247,6 +247,9 @@ static inline int is_kernel_text(unsigned long addr)
  * of max_low_pfn pages, by creating page tables starting from address
  * PAGE_OFFSET:
  */
+
+//将内核的物理地址start到end映射到线性地址上，page_size_mask是页大小，分别有4K，2MB，1G三种大小 
+
 unsigned long __init
 kernel_physical_mapping_init(unsigned long start,
 			     unsigned long end,
@@ -264,7 +267,12 @@ kernel_physical_mapping_init(unsigned long start,
 	unsigned pages_2m, pages_4k;
 	int mapping_iter;
 
+
+
+	//根据start获取其对应的页框号，由于页大小为4KB，所以在地址里占用12位，其余的就是页框号了，这里就是start右移12位
 	start_pfn = start >> PAGE_SHIFT;
+
+	//根据end获取其对应的页框号
 	end_pfn = end >> PAGE_SHIFT;
 
 	/*
@@ -281,6 +289,8 @@ kernel_physical_mapping_init(unsigned long start,
 	 *      that would change, for any linear address, both the page size
 	 *      and either the page frame or attributes."
 	 */
+
+	//设置为1，表示此时是第一次迭代。在这个函数中需要进行两次迭代，这两次迭代不同的就是设置的表项属性不同 
 	mapping_iter = 1;
 
 	if (!boot_cpu_has(X86_FEATURE_PSE))
@@ -288,28 +298,49 @@ kernel_physical_mapping_init(unsigned long start,
 
 repeat:
 	pages_2m = pages_4k = 0;
+
+	// 等于start地址对应的页框号
 	pfn = start_pfn;
+
+	//根据页框号pfn获取此页框在页全局目录(pgd)项中的偏移量(pgd_idx)，注意后面加了个PAGE_OFFSET(0xC0000000)，所以这就会让线性地址0xC0000000与物理地址0x00000000相应 
 	pgd_idx = pgd_index((pfn<<PAGE_SHIFT) + PAGE_OFFSET);
+	
 	pgd = pgd_base + pgd_idx;
+
+	//这里会从pgd的第pgd_idx项向后遍历所有的页全局目录项，直到页框号pfn大于end_pfn为止 
+	
+	//这里就会将start到end这段线性地址中所有页框对应的页表项都遍历了一遍
 	for (; pgd_idx < PTRS_PER_PGD; pgd++, pgd_idx++) {
+
+	    //根据页全局目录项获取页中间目录所在页地址 
 		pmd = one_md_table_init(pgd);
 
 		if (pfn >= end_pfn)
 			continue;
 #ifdef CONFIG_X86_PAE
+
+        //根据页框对应的线性地址获取相应的页中间目录项pmd偏移量 
 		pmd_idx = pmd_index((pfn<<PAGE_SHIFT) + PAGE_OFFSET);
 		pmd += pmd_idx;
 #else
+
+		//在32位未开启PAE的情况下，pmd是空的
 		pmd_idx = 0;
 #endif
+
+		//PTRS_PER_PMD代表一个页中间目录有多少项，对于没有启动物理地址扩展的32系统下，其项数为1，其他情况下为512项 
 		for (; pmd_idx < PTRS_PER_PMD && pfn < end_pfn;
 		     pmd++, pmd_idx++) {
+
+			//获取页框号pfn对应的物理地址
 			unsigned int addr = pfn * PAGE_SIZE + PAGE_OFFSET;
 
 			/*
 			 * Map with big pages if possible, otherwise
 			 * create normal page tables:
 			 */
+
+			//如果使用了PSE，则页框大小会变成4MB，但是这里却是用pages_2m来保存，2MB大小的页框应该是PAE技术使用的，并不是PSE，这里不太明白，可能PAE代替了PSE
 			if (use_pse) {
 				unsigned int addr2;
 				pgprot_t prot = PAGE_KERNEL_LARGE;

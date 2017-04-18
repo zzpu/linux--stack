@@ -136,6 +136,7 @@ arch_get_unmapped_area(struct file *filp, unsigned long addr,
 	if (len > end)
 		return -ENOMEM;
 
+    // 映射地址被指定
 	if (addr) {
 		addr = PAGE_ALIGN(addr);
 		vma = find_vma(mm, addr);

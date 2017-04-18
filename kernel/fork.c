@@ -476,7 +476,9 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
 	int err;
 
 	if (node == NUMA_NO_NODE)
-		node = tsk_fork_get_node(orig);
+		node = tsk_fork_get_node(orig);\
+	
+	// 分配内存建立新进程的 task_struct 结构
 	tsk = alloc_task_struct_node(node);
 	if (!tsk)
 		return NULL;
@@ -548,6 +550,7 @@ free_tsk:
 	free_task_struct(tsk);
 	return NULL;
 }
+// 内核页目录建立 do_fork -> copy_process -> copy_mm -> dup_mm -> mm_init -> mm_alloc_pgd -> pgd_alloc -> _pgd_alloc
 
 #ifdef CONFIG_MMU
 static __latent_entropy int dup_mmap(struct mm_struct *mm,
@@ -604,9 +607,14 @@ static __latent_entropy int dup_mmap(struct mm_struct *mm,
 				goto fail_nomem;
 			charge = len;
 		}
+
+		//分配一个新的内存区域
 		tmp = kmem_cache_alloc(vm_area_cachep, GFP_KERNEL);
 		if (!tmp)
 			goto fail_nomem;
+
+		////将父进程的虚拟地址空间拷贝到新分配的虚拟地址空间中去，并将新分配的虚拟地址空间插入到新进程内存空间中去，这里有两种数据结构，
+		//一种是链表用于方便的遍历所有的虚拟地址空间，另一种是红黑树，用来快速的找出适合的虚拟地址空间块
 		*tmp = *mpnt;
 		INIT_LIST_HEAD(&tmp->anon_vma_chain);
 		retval = vma_dup_policy(mpnt, tmp);
@@ -659,6 +667,9 @@ static __latent_entropy int dup_mmap(struct mm_struct *mm,
 		rb_parent = &tmp->vm_rb;
 
 		mm->map_count++;
+		//最后进行重新映射,要是没有这项(页表复制)的话，即使有合法访问的虚拟存储区域，但是没有正确的页表，
+		
+		//不能访问到具体的物理内存，所以为了能建立正确的页映射，使进程能够访问到具体的物理页。
 		retval = copy_page_range(mm, oldmm, mpnt);
 
 		if (tmp->vm_ops && tmp->vm_ops->open)
@@ -686,7 +697,7 @@ fail_nomem:
 	vm_unacct_memory(charge);
 	goto out;
 }
-
+// 内核页目录建立 do_fork -> copy_process -> copy_mm -> dup_mm -> mm_init -> mm_alloc_pgd -> pgd_alloc -> _pgd_alloc
 static inline int mm_alloc_pgd(struct mm_struct *mm)
 {
 	mm->pgd = pgd_alloc(mm);
@@ -745,6 +756,8 @@ static void mm_init_owner(struct mm_struct *mm, struct task_struct *p)
 #endif
 }
 
+// 内核页目录建立 do_fork -> copy_process -> copy_mm -> dup_mm -> mm_init -> mm_alloc_pgd -> pgd_alloc -> _pgd_alloc
+
 static struct mm_struct *mm_init(struct mm_struct *mm, struct task_struct *p,
 	struct user_namespace *user_ns)
 {
@@ -779,6 +792,7 @@ static struct mm_struct *mm_init(struct mm_struct *mm, struct task_struct *p,
 		mm->flags = default_dump_filter;
 		mm->def_flags = 0;
 	}
+	//为页目录分配内存
 
 	if (mm_alloc_pgd(mm))
 		goto fail_nopgd;
@@ -1118,6 +1132,9 @@ void mm_release(struct task_struct *tsk, struct mm_struct *mm)
  * Allocate a new mm structure and copy contents from the
  * mm structure of the passed in task structure.
  */
+
+// 内核页目录建立 do_fork -> copy_process -> copy_mm -> dup_mm -> mm_init -> mm_alloc_pgd -> pgd_alloc -> _pgd_alloc
+
 static struct mm_struct *dup_mm(struct task_struct *tsk)
 {
 	struct mm_struct *mm, *oldmm = current->mm;
@@ -1131,7 +1148,7 @@ static struct mm_struct *dup_mm(struct task_struct *tsk)
 
 	if (!mm_init(mm, tsk, mm->user_ns))
 		goto fail_nomem;
-
+    //拷贝页表
 	err = dup_mmap(mm, oldmm);
 	if (err)
 		goto free_pt;
@@ -1152,7 +1169,7 @@ free_pt:
 fail_nomem:
 	return NULL;
 }
-
+// 内核页目录建立 do_fork -> copy_process -> copy_mm -> dup_mm -> mm_init -> mm_alloc_pgd -> pgd_alloc -> _pgd_alloc
 static int copy_mm(unsigned long clone_flags, struct task_struct *tsk)
 {
 	struct mm_struct *mm, *oldmm;
@@ -1186,6 +1203,7 @@ static int copy_mm(unsigned long clone_flags, struct task_struct *tsk)
 	}
 
 	retval = -ENOMEM;
+	//拷贝虚拟地址
 	mm = dup_mm(tsk);
 	if (!mm)
 		goto fail_nomem;
@@ -1448,6 +1466,9 @@ init_task_pid(struct task_struct *task, enum pid_type type, struct pid *pid)
  * parts of the process environment (as per the clone
  * flags). The actual kick-off is left to the caller.
  */
+
+// 内核页目录建立 do_fork -> copy_process -> copy_mm -> dup_mm -> mm_init -> mm_alloc_pgd -> pgd_alloc -> _pgd_alloc
+
 static __latent_entropy struct task_struct *copy_process(
 					unsigned long clone_flags,
 					unsigned long stack_start,
@@ -1652,6 +1673,10 @@ static __latent_entropy struct task_struct *copy_process(
 	retval = copy_signal(clone_flags, p);
 	if (retval)
 		goto bad_fork_cleanup_sighand;
+	// 内核页目录建立 do_fork -> copy_process -> copy_mm -> dup_mm -> mm_init -> mm_alloc_pgd -> pgd_alloc -> _pgd_alloc
+
+	
+	//拷贝虚拟地址-----------------------------------------------------------------------
 	retval = copy_mm(clone_flags, p);
 	if (retval)
 		goto bad_fork_cleanup_signal;
@@ -1904,6 +1929,9 @@ struct task_struct *fork_idle(int cpu)
  * It copies the process, and if successful kick-starts
  * it and waits for it to finish using the VM if required.
  */
+
+// 内核页目录建立 do_fork -> copy_process -> copy_mm -> dup_mm -> mm_init -> mm_alloc_pgd -> pgd_alloc -> _pgd_alloc
+
 long _do_fork(unsigned long clone_flags,
 	      unsigned long stack_start,
 	      unsigned long stack_size,
@@ -1933,6 +1961,7 @@ long _do_fork(unsigned long clone_flags,
 			trace = 0;
 	}
 
+    //往下未执行虚拟地址拷贝,页表拷贝
 	p = copy_process(clone_flags, stack_start, stack_size,
 			 child_tidptr, NULL, trace, tls, NUMA_NO_NODE);
 	add_latent_entropy();
@@ -1985,6 +2014,7 @@ long do_fork(unsigned long clone_flags,
 	      int __user *parent_tidptr,
 	      int __user *child_tidptr)
 {
+    // do_fork->  copy_process  -->  copy_mm  -->  dup_mm  -->   dup_mmap  -->  copy_page_range
 	return _do_fork(clone_flags, stack_start, stack_size,
 			parent_tidptr, child_tidptr, 0);
 }
@@ -2088,6 +2118,7 @@ void __init proc_caches_init(void)
 			sizeof(struct mm_struct), ARCH_MIN_MMSTRUCT_ALIGN,
 			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_NOTRACK|SLAB_ACCOUNT,
 			NULL);
+	//vm_area_struct结构对象cache创建
 	vm_area_cachep = KMEM_CACHE(vm_area_struct, SLAB_PANIC|SLAB_ACCOUNT);
 	mmap_init();
 	nsproxy_cache_init();

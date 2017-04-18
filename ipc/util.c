@@ -344,6 +344,10 @@ static int ipcget_public(struct ipc_namespace *ns, struct ipc_ids *ids,
 //	   .more_checks = shm_more_checks,
 //   };
 
+//
+//	shm_params.key = key;
+//	shm_params.flg = shmflg;
+//	shm_params.u.size = size;
 
 	struct kern_ipc_perm *ipcp;
 	int flg = params->flg;
@@ -358,7 +362,7 @@ static int ipcget_public(struct ipc_namespace *ns, struct ipc_ids *ids,
 	//查找看是否有对应的共享内存区块
 	ipcp = ipc_findkey(ids, params->key);
 	
-	// 如果不存则建立
+	//如果不存则建立
 	if (ipcp == NULL) {
 		/* key not used */
 		if (!(flg & IPC_CREAT))

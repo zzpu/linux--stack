@@ -24,7 +24,7 @@
 
 struct mm_struct;
 struct vm_area_struct;
-
+//创建一个新进程的时候，需要为它分配一个 page，作为页目录表，并将 swapper_pg_dir[] 的高 256 项拷贝过来，低 768 项则清0
 extern pgd_t swapper_pg_dir[1024];
 extern pgd_t initial_page_table[1024];
 

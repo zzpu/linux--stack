@@ -207,7 +207,7 @@ static struct inode *alloc_inode(struct super_block *sb)
 		//sockfs_ops 
 		// sockfs_ops ock_init 
 
-	    //
+	    //对于ramfs 而言, shmem_alloc_inode
 		inode = sb->s_op->alloc_inode(sb);//inode ,sock_alloc_inode
 		
 	else
@@ -892,6 +892,8 @@ EXPORT_SYMBOL(get_next_ino);
 struct inode *new_inode_pseudo(struct super_block *sb)
 {
     //sock_alloc_inode
+
+	//对于ramfs 而言, shmem_alloc_inode
 	struct inode *inode = alloc_inode(sb);
 
 	if (inode) {
@@ -921,6 +923,8 @@ struct inode *new_inode(struct super_block *sb)
 
 	spin_lock_prefetch(&sb->s_inode_list_lock);
 
+   
+	// shmem_alloc_inode
 	inode = new_inode_pseudo(sb);
 	if (inode)
 		inode_sb_list_add(inode);

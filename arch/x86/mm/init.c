@@ -272,7 +272,7 @@ static const char *page_size_string(struct map_range *mr)
 
 	return str_4k;
 }
-
+//这个函数会根据页的大小(4K,2M,1G)建立不同的内存段，1G大小的页框只会在64位系统下使用 
 static int __meminit split_mem_range(struct map_range *mr, int nr_range,
 				     unsigned long start,
 				     unsigned long end)
@@ -281,10 +281,17 @@ static int __meminit split_mem_range(struct map_range *mr, int nr_range,
 	unsigned long pfn;
 	int i;
 
+	//获取物理地址end的所在页框号 --> 实际是右移12位,4K
 	limit_pfn = PFN_DOWN(end);
 
 	/* head if not big page alignment ? */
+
+	//物理地址start所在页框，初始化阶段此值为0 
 	pfn = start_pfn = PFN_DOWN(start);
+
+	//---------------------------------------------------------------------------------------------------------------------------------------
+
+	//这一部分建立了一个页框大小为4K的内存段(mr)
 #ifdef CONFIG_X86_32
 	/*
 	 * Don't use a large page for the first 2/4MB of memory
@@ -292,21 +299,49 @@ static int __meminit split_mem_range(struct map_range *mr, int nr_range,
 	 * and overlapping MTRRs into large pages can cause
 	 * slowdowns.
 	 */
+
+	//PMD_SIZE保存页中间目录可映射区域的大小
+	//PAE禁用: 4M    
+	//PAE激活: 2M 
+
 	if (pfn == 0)
+
+		//如果pfn为0，也就是开始页框号是0，那结束页框号就是4M或者2M 
 		end_pfn = PFN_DOWN(PMD_SIZE);
 	else
+		//如果pfn不为0，以pfn开始(包括pfn)，向上找到下一个是PMD_SIZE倍数的页框号
 		end_pfn = round_up(pfn, PFN_DOWN(PMD_SIZE));
+
+	
+		//以下数值都是二进制表示(其实是销掉y的位数)
+		//round_up(x,y):				  x: 11010010			   y: 1000				结果; 11011000
+		//round_up(x,y):				  x: 11011010			   y: 1000				结果: 11100000
+		//
+		//round_down(x,y):			      x: 11010010			   y: 1000				结果: 11010000
+		//round_down(x,1) 			      x: 11011010			   y: 1000				结果: 11011000
+
+	
 #else /* CONFIG_X86_64 */
 	end_pfn = round_up(pfn, PFN_DOWN(PMD_SIZE));
 #endif
 	if (end_pfn > limit_pfn)
 		end_pfn = limit_pfn;
 	if (start_pfn < end_pfn) {
+		//其实是 start_pfn 和 end_pfn 填充        mr 数组
+
+		
 		nr_range = save_mr(mr, nr_range, start_pfn, end_pfn, 0);
 		pfn = end_pfn;
 	}
 
+	//---------------------------------------------------------------------------------------------------------------------------------------
+
 	/* big page (2M) range */
+	
+	//第二个区域，创建大小为2M的页框内存段，32位下2M的页框只有在PAE开启的情况下才会有，这个区不是一定会有的(有的条件是 32位系统 && PAE启动 && 开启2M大小页框) 
+
+    //以pfn开始(包括pfn)，向上找到下一个是PMD_SIZE倍数的页框号，这里的情况结果一般都是 start_pfn = pfn 
+    
 	start_pfn = round_up(pfn, PFN_DOWN(PMD_SIZE));
 #ifdef CONFIG_X86_32
 	end_pfn = round_down(limit_pfn, PFN_DOWN(PMD_SIZE));
@@ -317,12 +352,21 @@ static int __meminit split_mem_range(struct map_range *mr, int nr_range,
 #endif
 
 	if (start_pfn < end_pfn) {
+
+	    ////page_size_mask是页大小，分别有4K，2MB，1G三种大小
+	    
 		nr_range = save_mr(mr, nr_range, start_pfn, end_pfn,
 				page_size_mask & (1<<PG_LEVEL_2M));
 		pfn = end_pfn;
 	}
 
+
 #ifdef CONFIG_X86_64
+
+	//---------------------------------------------------------------------------------------------------------------------------------------
+
+    //X64下会建立一个区域页框大小为1G的，32位下不会有
+    
 	/* big page (1G) range */
 	start_pfn = round_up(pfn, PFN_DOWN(PUD_SIZE));
 	end_pfn = round_down(limit_pfn, PFN_DOWN(PUD_SIZE));
@@ -406,9 +450,14 @@ bool pfn_range_is_mapped(unsigned long start_pfn, unsigned long end_pfn)
  * This runs before bootmem is initialized and gets pages directly from
  * the physical memory. To access them they are temporarily mapped.
  */
+ 
+// 内核将start ~ end 这段物理地址映射到线性地址上，这个函数仅会映射低端内存区(ZONE_DMA和ZONE_NORMAL)，线性地址0xC0000000 对应的物理地址是 0x00000000 
 unsigned long __ref init_memory_mapping(unsigned long start,
 					       unsigned long end)
 {
+
+	//用于保存内存段信息，每个段的页框大小不同，可能有4K，2M，1G三种
+
 	struct map_range mr[NR_RANGE_MR];
 	unsigned long ret = 0;
 	int nr_range, i;
@@ -416,15 +465,29 @@ unsigned long __ref init_memory_mapping(unsigned long start,
 	pr_debug("init_memory_mapping: [mem %#010lx-%#010lx]\n",
 	       start, end - 1);
 
+	//清空mr
+
 	memset(mr, 0, sizeof(mr));
+
+
+	//根据start和end设置mr数组，并返回个数 
 	nr_range = split_mem_range(mr, 0, start, end);
 
 	for (i = 0; i < nr_range; i++)
+		
+		//将内核的物理地址start到end映射到线性地址上，page_size_mask是页大小，分别有4K，2MB，1G三种大小 
 		ret = kernel_physical_mapping_init(mr[i].start, mr[i].end,
 						   mr[i].page_size_mask);
+	
+	//PAGE_SHIFT,PMD_SHIFT,PUD_SHIFT,PGDIR_SHIFT
+	//
+	//对应相应的页目录所能映射的区域大小的位数，如PAGE_SHIFT为12，即页面大小为4k，PMD_SHIFT为线性地址的offset和table字段的总位数，未启用PAE的32位系统下，为22.
 
+
+	//调整页框映射的设置，和map_range类似，只是map_range是线性地址的映射数据，这里面是页框映射的数据
 	add_pfn_range_mapped(start >> PAGE_SHIFT, ret >> PAGE_SHIFT);
 
+	//返回最后映射的页框号
 	return ret >> PAGE_SHIFT;
 }
 
@@ -585,20 +648,48 @@ static void __init memory_map_bottom_up(unsigned long map_start,
 			step_size = get_new_step_size(step_size);
 	}
 }
+//start_kernel -->	setup_arch	--> init_mem_mapping  --> init_memory_mapping
+
+//对于页表的初始化，内核有一个优先级顺序，低端内存(物理内存中保留的前1MB) ->低端内存(内核未使用部分) -> 
+
+//低端内存(内核使用部分) -> 高端内存(固定映射区) -> 高端内存(永久内核映射区)。
+
+//首先，对于低端内存区域的页表初始化和高端内存固定映射区页表的初始化都集中在init_mem_mapping(void)函数中:
 
 void __init init_mem_mapping(void)
 {
 	unsigned long end;
 
+
+	//设置了page_size_mask全局变量，这个变量决定了系统中有多少种页框大小(4K,2M,1G)
+	//1G大小的页框只存在于64位系统中
+	//4K大小的页框是普通的页框
+	//2M大小的页框是32位内核开启了PAE后可选择页大小为2M
+
+
 	probe_page_size_mask();
 
+	//max_pfn 和 max_low_pfn 都是由BIOS提供获取 
+
+	
+	//swapper_pg_dir：主内核页全局目录指针，cr3寄存器中保存的内核页全局目录地址就是从这个变量而来。
+	//max_pfn：物理内存中最后一个页框号。
+	//max_low_pfn：低端内存中最后一个页框号。
+
 #ifdef CONFIG_X86_64
+
+	/* 64位没有高端内存区 */
+
 	end = max_pfn << PAGE_SHIFT;
 #else
 	end = max_low_pfn << PAGE_SHIFT;
 #endif
 
 	/* the ISA range is always mapped regardless of memory holes */
+
+	//start_kernel -->	setup_arch	--> init_mem_mapping  --> init_memory_mapping
+
+    //1M
 	init_memory_mapping(0, ISA_END_ADDRESS);
 
 	/* Init the trampoline, possibly with KASLR memory offset */
@@ -609,6 +700,8 @@ void __init init_mem_mapping(void)
 	 * in bottom-up, otherwise we setup direct mapping in top-down.
 	 */
 	if (memblock_bottom_up()) {
+
+	 	//内核启动阶段使用的内存的结束地址，内核启动时一般使用物理内存 1MB ~ 4MB 的区域
 		unsigned long kernel_end = __pa_symbol(_end);
 
 		/*
@@ -618,7 +711,11 @@ void __init init_mem_mapping(void)
 		 * as soon as possible. And then use page tables allocated above
 		 * the kernel to map [ISA_END_ADDRESS, kernel_end).
 		 */
+
+		//先映射 内核结束地址 ~ ZONE_NORMAL结束地址 这块物理地址区域，如果是64位，则直接初始化到最后的内存页框，因为64位没有高端内存区 
 		memory_map_bottom_up(kernel_end, end);
+
+		//再映射 1MB ~ 内核结束地址 这块物理地址区域
 		memory_map_bottom_up(ISA_END_ADDRESS, kernel_end);
 	} else {
 		memory_map_top_down(ISA_END_ADDRESS, end);
@@ -630,10 +727,13 @@ void __init init_mem_mapping(void)
 		max_low_pfn = max_pfn;
 	}
 #else
+	//高端内存区的固定映射区的初始化，只初始化好了页中间目录项和页表，页表项并没初始化 
 	early_ioremap_page_table_range_init();
 #endif
 
 	load_cr3(swapper_pg_dir);
+
+	//刷新tlb，每次修改了页表都需要刷新一下
 	__flush_tlb_all();
 
 	early_memtest(0, max_pfn_mapped << PAGE_SHIFT);

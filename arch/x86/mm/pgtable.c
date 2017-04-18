@@ -121,12 +121,16 @@ static void pgd_ctor(struct mm_struct *mm, pgd_t *pgd)
 	if (CONFIG_PGTABLE_LEVELS == 2 ||
 	    (CONFIG_PGTABLE_LEVELS == 3 && SHARED_KERNEL_PMD) ||
 	    CONFIG_PGTABLE_LEVELS == 4) {
-		clone_pgd_range(pgd + KERNEL_PGD_BOUNDARY,
-				swapper_pg_dir + KERNEL_PGD_BOUNDARY,
-				KERNEL_PGD_PTRS);
+	    //初始化页表的内核空间
+
+		//创建一个新进程的时候，需要为它分配一个 page，作为页目录表，并将 swapper_pg_dir[] 的高 256 项拷贝过来，低 768 项则清0
+		clone_pgd_range(pgd + KERNEL_PGD_BOUNDARY,         //目的地址
+				swapper_pg_dir + KERNEL_PGD_BOUNDARY,      //源地址
+				KERNEL_PGD_PTRS);                          //拷贝size ( PTRS_PER_PGD - KERNEL_PGD_BOUNDARY )
 	}
 
 	/* list required to sync kernel mapping updates */
+	//定义为0
 	if (!SHARED_KERNEL_PMD) {
 		pgd_set_mm(pgd, mm);
 		pgd_list_add(pgd);
@@ -320,6 +324,8 @@ static int __init pgd_cache_init(void)
 }
 core_initcall(pgd_cache_init);
 
+// 内核页目录建立 do_fork -> copy_process -> copy_mm -> dup_mm -> mm_init -> mm_alloc_pgd -> pgd_alloc -> _pgd_alloc
+
 static inline pgd_t *_pgd_alloc(void)
 {
 	/*
@@ -333,6 +339,8 @@ static inline pgd_t *_pgd_alloc(void)
 	 * Now PAE kernel is not running as a Xen domain. We can allocate
 	 * a 32-byte slab for pgd to save memory space.
 	 */
+
+	// pgd_cache_init 初始化 pgd_cache
 	return kmem_cache_alloc(pgd_cache, PGALLOC_GFP);
 }
 
@@ -355,11 +363,15 @@ static inline void _pgd_free(pgd_t *pgd)
 }
 #endif /* CONFIG_X86_PAE */
 
+// 内核页目录建立 do_fork -> copy_process -> copy_mm -> dup_mm -> mm_init -> mm_alloc_pgd -> pgd_alloc -> _pgd_alloc
+
 pgd_t *pgd_alloc(struct mm_struct *mm)
 {
 	pgd_t *pgd;
+	//由于未开启PAE机制，因此不用关心所有有关pmd的操作
 	pmd_t *pmds[PREALLOCATED_PMDS];
 
+    //分配一页内存
 	pgd = _pgd_alloc();
 
 	if (pgd == NULL)
@@ -379,7 +391,10 @@ pgd_t *pgd_alloc(struct mm_struct *mm)
 	 * never see a partially populated pgd.
 	 */
 	spin_lock(&pgd_lock);
+	
+    //关键代码，将指向内核空间的页目录项拷贝到新分配的pgd对应的项目中。  
 
+	//创建一个新进程的时候，需要为它分配一个 page，作为页目录表，并将 swapper_pg_dir[] 的高 256 项拷贝过来，低 768 项则清0
 	pgd_ctor(mm, pgd);
 	pgd_prepopulate_pmd(mm, pgd, pmds);
 
