@@ -4975,6 +4975,7 @@ build_all_zonelists_init(void)
  */
 void __ref build_all_zonelists(pg_data_t *pgdat, struct zone *zone)
 {
+	//对于UMA current_zonelist_order 设置为 2
 	set_zonelist_order();
 
 	if (system_state == SYSTEM_BOOTING) {
@@ -5304,6 +5305,10 @@ int __meminit init_currently_empty_zone(struct zone *zone,
 			pgdat->node_id,
 			(unsigned long)zone_idx(zone),
 			zone_start_pfn, (zone_start_pfn + size));
+	
+	//paging_init() --> zone_sizes_init() --> free_area_init_nodes() --> free_area_init_node() --> free_area_init_core()
+	
+	//--> init_currently_empty_zone() --> zone_init_free_lists()
 
 	zone_init_free_lists(zone);
 	zone->initialized = 1;
@@ -5627,7 +5632,8 @@ static void __meminit calculate_node_totalpages(struct pglist_data *pgdat,
 {
 	unsigned long realtotalpages = 0, totalpages = 0;
 	enum zone_type i;
-
+	
+	//遍历节点的所有管理区
 	for (i = 0; i < MAX_NR_ZONES; i++) {
 		struct zone *zone = pgdat->node_zones + i;
 		unsigned long zone_start_pfn, zone_end_pfn;
@@ -5762,6 +5768,11 @@ static unsigned long __paginginit calc_memmap_size(unsigned long spanned_pages,
  *
  * NOTE: pgdat should get zeroed by caller.
  */
+
+//paging_init() --> zone_sizes_init() --> free_area_init_nodes() --> free_area_init_node() --> free_area_init_core()
+
+//--> init_currently_empty_zone() --> zone_init_free_lists()
+
 static void __paginginit free_area_init_core(struct pglist_data *pgdat)
 {
 	enum zone_type j;
@@ -5848,6 +5859,10 @@ static void __paginginit free_area_init_core(struct pglist_data *pgdat)
 
 		set_pageblock_order();
 		setup_usemap(pgdat, zone, zone_start_pfn, size);
+		
+		//paging_init() --> zone_sizes_init() --> free_area_init_nodes() --> free_area_init_node() --> free_area_init_core()
+		
+		//--> init_currently_empty_zone() --> zone_init_free_lists()
 		ret = init_currently_empty_zone(zone, zone_start_pfn, size);
 		BUG_ON(ret);
 		memmap_init(size, nid, j, zone_start_pfn);
@@ -5889,6 +5904,7 @@ static void __ref alloc_node_mem_map(struct pglist_data *pgdat)
 	/*
 	 * With no DISCONTIG, the global mem_map is just set as node 0's
 	 */
+	// 如果没有定义多节点支持,mem_map就是节点0的node_mem_map
 	if (pgdat == NODE_DATA(0)) {
 		mem_map = NODE_DATA(0)->node_mem_map;
 #if defined(CONFIG_HAVE_MEMBLOCK_NODE_MAP) || defined(CONFIG_FLATMEM)
@@ -5900,9 +5916,15 @@ static void __ref alloc_node_mem_map(struct pglist_data *pgdat)
 #endif /* CONFIG_FLAT_NODE_MEM_MAP */
 }
 
+//paging_init() --> zone_sizes_init() --> free_area_init_nodes() --> free_area_init_node() --> free_area_init_core()
+
+//--> init_currently_empty_zone() --> zone_init_free_lists()
+
 void __paginginit free_area_init_node(int nid, unsigned long *zones_size,
 		unsigned long node_start_pfn, unsigned long *zholes_size)
 {
+
+	//如果没有定义 CONFIG_NEED_MULTIPLE_NODES 则 NODE_DATA 得到 contig_page_data
 	pg_data_t *pgdat = NODE_DATA(nid);
 	unsigned long start_pfn = 0;
 	unsigned long end_pfn = 0;
@@ -5922,9 +5944,13 @@ void __paginginit free_area_init_node(int nid, unsigned long *zones_size,
 #else
 	start_pfn = node_start_pfn;
 #endif
+
+	//计算节点占用的总页面数和除去洞的实际总页面数
 	calculate_node_totalpages(pgdat, start_pfn, end_pfn,
 				  zones_size, zholes_size);
+	//分配节点的mem_map（node->node_mem_map)
 
+	//UMA体系中，node中的各个zone的zone_mem_map就指向mem_map中的某些元素作为zone所管理的第一个page的地址
 	alloc_node_mem_map(pgdat);
 #ifdef CONFIG_FLAT_NODE_MEM_MAP
 	printk(KERN_DEBUG "free_area_init_node: node %d, pgdat %08lx, node_mem_map %08lx\n",
@@ -5932,6 +5958,13 @@ void __paginginit free_area_init_node(int nid, unsigned long *zones_size,
 		(unsigned long)pgdat->node_mem_map);
 #endif
 
+	//paging_init() --> zone_sizes_init() --> free_area_init_nodes() --> free_area_init_node() --> free_area_init_core()
+	
+	//--> init_currently_empty_zone() --> zone_init_free_lists()
+
+	//初始化节点中的关键数据
+
+	//核心函数,为node的初始化过程分配本地的 mem_map（node->node_mem_map)。数组的内存在boot memory 分配的alloc_bootmem_node()函数分配
 	free_area_init_core(pgdat);
 }
 
@@ -6026,6 +6059,7 @@ static unsigned long __init find_min_pfn_for_node(int nid)
  */
 unsigned long __init find_min_pfn_with_active_regions(void)
 {
+	//左移6位
 	return find_min_pfn_for_node(MAX_NUMNODES);
 }
 
@@ -6285,6 +6319,14 @@ static void check_for_memory(pg_data_t *pgdat, int nid)
  * starts where the previous one ended. For example, ZONE_DMA32 starts
  * at arch_max_dma_pfn.
  */
+
+//paging_init() --> zone_sizes_init() --> free_area_init_nodes() --> free_area_init_node() --> free_area_init_core()
+
+//--> init_currently_empty_zone() --> zone_init_free_lists()
+
+// max_zone_pfn 是个长度为4的数组
+
+// free_area_init
 void __init free_area_init_nodes(unsigned long *max_zone_pfn)
 {
 	unsigned long start_pfn, end_pfn;
@@ -6296,6 +6338,7 @@ void __init free_area_init_nodes(unsigned long *max_zone_pfn)
 	memset(arch_zone_highest_possible_pfn, 0,
 				sizeof(arch_zone_highest_possible_pfn));
 
+	//辅助函数find_min_pfn_with_active_regions用于找到注册的最低内存域中可用的编号最小的页帧 
 	start_pfn = find_min_pfn_with_active_regions();
 
 	for (i = 0; i < MAX_NR_ZONES; i++) {
@@ -6305,7 +6348,8 @@ void __init free_area_init_nodes(unsigned long *max_zone_pfn)
 		end_pfn = max(max_zone_pfn[i], start_pfn);
 		arch_zone_lowest_possible_pfn[i] = start_pfn;
 		arch_zone_highest_possible_pfn[i] = end_pfn;
-
+		
+		//将下一个管理区的起始页框置为上一个管理区的结束页框
 		start_pfn = end_pfn;
 	}
 	arch_zone_lowest_possible_pfn[ZONE_MOVABLE] = 0;
@@ -6342,6 +6386,8 @@ void __init free_area_init_nodes(unsigned long *max_zone_pfn)
 
 	/* Print out the early node map */
 	pr_info("Early memory node ranges\n");
+
+	//搞不懂为何要? MAX_NUMNODES 左移6位
 	for_each_mem_pfn_range(i, MAX_NUMNODES, &start_pfn, &end_pfn, &nid)
 		pr_info("  node %3d: [mem %#018Lx-%#018Lx]\n", nid,
 			(u64)start_pfn << PAGE_SHIFT,
@@ -6349,9 +6395,19 @@ void __init free_area_init_nodes(unsigned long *max_zone_pfn)
 
 	/* Initialise every node */
 	mminit_verify_pageflags_layout();
+	
 	setup_nr_node_ids();
+	//实现在include\linux\nodemask.h     -->  没有定义 CONFIG_NUMA 只会执行一次,与nid无关,因为只有一个 node
 	for_each_online_node(nid) {
+	
+		// 置为 contig_page_data
 		pg_data_t *pgdat = NODE_DATA(nid);
+
+		//初始化节点
+
+		//paging_init() --> zone_sizes_init() --> free_area_init_nodes() --> free_area_init_node() --> free_area_init_core()
+
+		//--> init_currently_empty_zone() --> zone_init_free_lists()
 		free_area_init_node(nid, NULL,
 				find_min_pfn_for_node(nid), NULL);
 

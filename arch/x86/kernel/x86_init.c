@@ -33,7 +33,14 @@ void iommu_shutdown_noop(void) { }
  * The platform setup functions are preset with the default functions
  * for standard PC hardware.
  */
-struct x86_init_ops x86_init __initdata = {
+
+//__initdata宏用于数据定义，目的是将数据放入名叫.init.data的输入段
+
+//为了让source insight识别,先注释替换这句代码
+
+//struct x86_init_ops x86_init  __initdata  = {
+struct x86_init_ops x86_init  = {
+
 
 	.resources = {
 		.probe_roms		= probe_roms,

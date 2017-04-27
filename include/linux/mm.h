@@ -1673,6 +1673,8 @@ static inline void pte_lock_deinit(struct page *page) {}
 static inline void pgtable_init(void)
 {
 	ptlock_cache_init();
+
+	//是个空函数
 	pgtable_cache_init();
 }
 

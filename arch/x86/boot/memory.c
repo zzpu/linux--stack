@@ -56,6 +56,16 @@ static int detect_memory_e820(void)
 	 * attribute bits deployed in a meaningful way in the future.
 	 */
 
+	//由于历史原因，一些i/o设备也会占据一部分内存物理地址空间，因此系统可以使用的物理内存空间是不连续的，
+	
+	//系统内存被分成了很多段，每个段的属性也是不一样的。int 0x15 查询物理内存时每次返回一个内存段的信息，
+	
+	//因此要想返回系统中所有的物理内存，我们必须以迭代的方式去查询。detect_memory_e820()函数把int 0x15放
+	
+	//到一个do-while循环里，每次得到的一个内存段放到struct e820entry里，而struct e820entry的结构正是e820
+	
+	//返回结果的结构！而像其它启动时获得的结果一样，最终都会被放到boot_params里，e820被放到了 boot_params.e820_map
+
 	do {
 		intcall(0x15, &ireg, &oreg);
 		ireg.ebx = oreg.ebx; /* for next iteration... */

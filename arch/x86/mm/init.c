@@ -309,7 +309,7 @@ static int __meminit split_mem_range(struct map_range *mr, int nr_range,
 		//如果pfn为0，也就是开始页框号是0，那结束页框号就是4M或者2M 
 		end_pfn = PFN_DOWN(PMD_SIZE);
 	else
-		//如果pfn不为0，以pfn开始(包括pfn)，向上找到下一个是PMD_SIZE倍数的页框号
+		//如果pfn不为0，以pfn开始(包括pfn)，向上找到下一个是PMD_SIZE(22位)倍数的页框号
 		end_pfn = round_up(pfn, PFN_DOWN(PMD_SIZE));
 
 	
@@ -353,7 +353,7 @@ static int __meminit split_mem_range(struct map_range *mr, int nr_range,
 
 	if (start_pfn < end_pfn) {
 
-	    ////page_size_mask是页大小，分别有4K，2MB，1G三种大小
+	    //page_size_mask是页大小，分别有4K，2MB，1G三种大小
 	    
 		nr_range = save_mr(mr, nr_range, start_pfn, end_pfn,
 				page_size_mask & (1<<PG_LEVEL_2M));
@@ -369,7 +369,7 @@ static int __meminit split_mem_range(struct map_range *mr, int nr_range,
     
 	/* big page (1G) range */
 	start_pfn = round_up(pfn, PFN_DOWN(PUD_SIZE));
-	end_pfn = round_down(limit_pfn, PFN_DOWN(PUD_SIZE));
+	end_pfn = round_down(limit_pfn, PFN_DOWN(PUD_SIZE));     //22位
 	if (start_pfn < end_pfn) {
 		nr_range = save_mr(mr, nr_range, start_pfn, end_pfn,
 				page_size_mask &
@@ -451,7 +451,7 @@ bool pfn_range_is_mapped(unsigned long start_pfn, unsigned long end_pfn)
  * the physical memory. To access them they are temporarily mapped.
  */
  
-// 内核将start ~ end 这段物理地址映射到线性地址上，这个函数仅会映射低端内存区(ZONE_DMA和ZONE_NORMAL)，线性地址0xC0000000 对应的物理地址是 0x00000000 
+// 内核将start(0) ~ end(1M) 这段物理地址映射到线性地址上，这个函数仅会映射低端内存区(ZONE_DMA和ZONE_NORMAL)，线性地址0xC0000000 对应的物理地址是 0x00000000 
 unsigned long __ref init_memory_mapping(unsigned long start,
 					       unsigned long end)
 {
@@ -830,17 +830,23 @@ void __init zone_sizes_init(void)
 
 	memset(max_zone_pfns, 0, sizeof(max_zone_pfns));
 
+	/*分别获取三个管理区的页面数*/  
+
 #ifdef CONFIG_ZONE_DMA
 	max_zone_pfns[ZONE_DMA]		= min(MAX_DMA_PFN, max_low_pfn);
 #endif
 #ifdef CONFIG_ZONE_DMA32
 	max_zone_pfns[ZONE_DMA32]	= min(MAX_DMA32_PFN, max_low_pfn);
 #endif
+	//低内存最大页框号 --> 896
 	max_zone_pfns[ZONE_NORMAL]	= max_low_pfn;
 #ifdef CONFIG_HIGHMEM
+	//最大的可用pfn
 	max_zone_pfns[ZONE_HIGHMEM]	= max_pfn;
 #endif
 
+	//mem_map是一个struct page的数组，管理着系统中所有的物理内存页面。在系统启动的过程中，创建和分配mem_map的内存区域。
+	//UMA体系结构中，free_area_init()函数在系统唯一的struct node对象contig_page_data中node_mem_map成员赋值给全局的mem_map变量。
 	free_area_init_nodes(max_zone_pfns);
 }
 

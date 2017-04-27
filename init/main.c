@@ -468,11 +468,21 @@ static void __init mm_init(void)
 	 * bigger than MAX_ORDER unless SPARSEMEM.
 	 */
 	page_ext_init_flatmem();
+	
 	mem_init();
+	//调用kmem_cache_init函数初始化内核内部用于小块内存区的分配器
 	kmem_cache_init();
+	
 	percpu_init_late();
+
+	//好像没做什么
 	pgtable_init();
+	
+	// 在内核中一个接口函数vmalloc，申请一片连续的虚拟地址空间，但不保证物理空间连续
+
+	//vmalloc申请效率比较低，还会造成TLB抖动. 一般内核里常用kmalloc. 除非特殊需求，比如要获取大块内存时，实例就是当ko模块加载到内核运行时，即需要vmalloc. 
 	vmalloc_init();
+	
 	ioremap_huge_init();
 }
 
@@ -480,9 +490,12 @@ asmlinkage __visible void __init start_kernel(void)
 {
 	char *command_line;
 	char *after_dashes;
-
+	
+    //配置任务栈
 	set_task_stack_end_magic(&init_task);
+	
 	smp_setup_processor_id();
+	
 	debug_objects_early_init();
 
 	/*
@@ -503,19 +516,29 @@ asmlinkage __visible void __init start_kernel(void)
 	page_address_init();
 	pr_notice("%s", linux_banner);
 
+	//是一个特定于体系结构的设置函数, 其中一项任务是负责初始化自举分配器
+
+	//在启动过程中，尽管内存管理模块尚未初始化完成，但内核仍然需要分配内存以创建各种数据结构。bootmem分配器用于在启动阶段分配内存
+
+	//setup_arch是特定于体系结构的，用于初始化页表，初始化bootmem分配器。该函数的执行流程图如下：
 	
 	//start_kernel -->  setup_arch
 	setup_arch(&command_line);
 
-	
+	//初始化CPU屏蔽字
 	mm_init_cpumask(&init_mm);
+	
 	setup_command_line(command_line);
+	
 	setup_nr_cpu_ids();
+	
 	setup_per_cpu_areas();
 	boot_cpu_state_init();
 	smp_prepare_boot_cpu();	/* arch-specific boot-cpu hooks */
 
+	//建立并初始化结点和内存域的数据结构
 	build_all_zonelists(NULL, NULL);
+	
 	page_alloc_init();
 
 	pr_notice("Kernel command line: %s\n", boot_command_line);
@@ -539,6 +562,17 @@ asmlinkage __visible void __init start_kernel(void)
 	vfs_caches_init_early();
 	sort_main_extable();
 	trap_init();
+	
+	//建立了内核的内存分配器, 
+	//其中通过mem_init停用bootmem分配器并迁移到实际的内存管理器(比如伙伴系统)
+	//然后调用kmem_cache_init函数初始化内核内部用于小块内存区的分配器
+
+	//在系统初始化进行到伙伴系统分配器能够承担内存管理的责任后，必须停用bootmem分
+	//配器。该函数遍历所有的内存域结点，对每个结点分别调用free_all_bootmem_node函数，
+	//停用bootmem分配器。该函数调用free_all_bootmem_core，首先扫描bootmem分配器位图，
+	//释放每个未用的页。到伙伴系统的接口是__free_pages_bootmem函数，该函数对每个空闲内存页调用，
+	//该函数内部依赖于标准函数__free_page。它使得这些页并入到伙伴系统的数据结构，在其中作为空闲页，
+	//用于分配管理。在页位图已经完全扫描后，它占据的内存空间也必须释放掉，此后，只有伙伴系统可用于内存分配。
 	mm_init();
 
 	/*

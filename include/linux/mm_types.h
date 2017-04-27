@@ -44,7 +44,9 @@ struct mem_cgroup;
  */
 struct page {
 	/* First double word block */
+	// 用来存放页的状态，每一位代表一种状态，所以至少可以同时表示出32中不同的状态,这些状态定义在linux/page-flags.h中
 	unsigned long flags;		/* Atomic flags, some possibly
+	
 					 * updated asynchronously */
 	union {
 		struct address_space *mapping;	/* If low bit clear, points to

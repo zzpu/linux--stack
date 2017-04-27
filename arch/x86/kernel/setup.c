@@ -850,6 +850,9 @@ dump_kernel_offset(struct notifier_block *self, unsigned long v, void *p)
  
 //start_kernel -->	setup_arch	(1130) --> init_mem_mapping
 
+//start_kernel -->	setup_arch	--> x86_init.paging.pagetable_init (1124) --> native_pagetable_init --> paging_init
+
+
 void __init setup_arch(char **cmdline_p)
 {
 	memblock_reserve(__pa_symbol(_text),
@@ -870,9 +873,49 @@ void __init setup_arch(char **cmdline_p)
 	 * copy kernel address range established so far and switch
 	 * to the proper swapper page table
 	 */
-	clone_pgd_range(swapper_pg_dir     + KERNEL_PGD_BOUNDARY,
-			initial_page_table + KERNEL_PGD_BOUNDARY,
-			KERNEL_PGD_PTRS);
+	//第一个参数：
+	//
+	//pgd + KERNEL_PGD_BOUNDARY
+	//pgd是分配得到的页目录的基地址，经过跟踪计算KERNEL_PGD_BOUNDARY=768，也就是指向pgd的第768项，这个项目正好是内核空间的开始。
+	//第二个参数：
+	//
+	//
+	//swapper_pg_dir + KERNEL_PGD_BOUNDARY,
+	//
+	//首先来看一下swapper_pg_dir是什么？（详细的解释请参看：http://blog.csdn.NET/sunnybeike/article/details/6897819）
+	//
+	//swapper_pg_dir这个东西其实就是一个页目录的指针。swapper_pg_dir只是在内核初始化的时候被载入到cr3指示内存映射信息，
+	
+	//之在init进程启动后就成了idle内核线程的页目录指针了，/sbin/init由一个叫做init的内核线程exec而成，而init内核线程是
+	
+	//原始的内核也就是后来的idle线程do_fork而成的，而在do_fork中会为新生的进程重启分配一个页目录指针，
+	
+	//由此可见swapper_pg_dir只是在idle和内核线程中被使用，可是它的作用却不只是为idle进程指示内存映射信息，
+	
+	//更多的，它作为一个内核空间的内存映射模板而存在，在Linux中，任何进程在内核空间就不分彼此了，
+	
+	//所有的进程都会公用一份内核空间的内存映射，因此，内核空间是所有进程共享的，每当一个新的进程建立的时候，
+	
+	//都会将swapper_pg_dir的768项以后的信息全部复制到新进程页目录的768项以后，代表内核空间。另外在操作3G+896M以上的虚拟内存时，
+	
+	//只会更改swapper_pg_dir的映射信息，当别的进程访问到这些页面的时候会发生缺页，在缺页处理中会与swapper_pg_dir同步。
+	//
+	//因此第二个参数指向的是页目录表模板的第768项，也就是指向指向内核空间的页目录项。
+	//
+	//第三个参数：
+	//
+	//KERNEL_PGD_PTRS
+	//
+	//
+	//顾名思义，是表示内核目录项的个数。
+	//
+	//因此，整个clone_pgd_range就是将初始化页表的内核空间。
+
+	
+
+	//其实就是调memcpy,其实就是初始化页表的内核空间
+	//                          dst               ---------------->              src         ---------------->    count              
+	clone_pgd_range(swapper_pg_dir     + KERNEL_PGD_BOUNDARY,initial_page_table + KERNEL_PGD_BOUNDARY,KERNEL_PGD_PTRS);
 
 	load_cr3(swapper_pg_dir);
 	/*
@@ -884,6 +927,8 @@ void __init setup_arch(char **cmdline_p)
 	 * quirk is invoked before subsequent calls to __flush_tlb_all()
 	 * so proper operation is guaranteed.
 	 */
+
+	//刷新缓冲区
 	__flush_tlb_all();
 #else
 	printk(KERN_INFO "Command line: %s\n", boot_command_line);
@@ -935,13 +980,21 @@ void __init setup_arch(char **cmdline_p)
 	if (efi_enabled(EFI_BOOT))
 		efi_memblock_x86_reserve_range();
 #endif
-
+    // x86_init_noop
 	x86_init.oem.arch_setup();
 
 	iomem_resource.end = (1ULL << boot_cpu_data.x86_phys_bits) - 1;
+
+	//memblock算法初始化
+
+	//主要就是为了把通过BIOS中断探测到的内存布局信息boot_params.e820_map做整合处理，完了转存到变量e820中
+
+	//同时保存到 e820_saved 中
 	setup_memory_map();
+	
 	parse_setup_data();
 
+    //没有定义 CONFIG_EDD_MODULE 是个空函数
 	copy_edd();
 
 	if (!boot_params.hdr.root_flags)
@@ -983,6 +1036,8 @@ void __init setup_arch(char **cmdline_p)
 	 * again from within noexec_setup() during parsing early parameters
 	 * to honor the respective command line option.
 	 */
+
+	// NX全称No execute，即禁止执行，是一种CPU硬件防病毒技术
 	x86_configure_nx();
 
 	parse_early_param();
@@ -1046,6 +1101,7 @@ void __init setup_arch(char **cmdline_p)
 	 * partially used pages are not usable - thus
 	 * we are rounding upwards:
 	 */
+	//e820 中 得到末尾内存分段的 页框号
 	max_pfn = e820_end_of_ram_pfn();
 
 	/* update e820 for memory not covered by WB MTRRs */
@@ -1070,6 +1126,7 @@ void __init setup_arch(char **cmdline_p)
 	/* How many end-of-memory variables you have, grandma! */
 	/* need this before calling reserve_initrd */
 	if (max_pfn > (1UL<<(32 - PAGE_SHIFT)))
+		//低内存最大页框号 --> 896
 		max_low_pfn = e820_end_of_low_ram_pfn();
 	else
 		max_low_pfn = max_pfn;
@@ -1170,7 +1227,8 @@ void __init setup_arch(char **cmdline_p)
 	acpi_boot_table_init();
 
 	early_acpi_boot_init();
-
+	
+    //initmem_init  --> initmem_init
 	initmem_init();
 	dma_contiguous_reserve(max_pfn_mapped << PAGE_SHIFT);
 
@@ -1185,6 +1243,12 @@ void __init setup_arch(char **cmdline_p)
 #ifdef CONFIG_KVM_GUEST
 	kvmclock_init();
 #endif
+
+    //页表的初始化
+
+    //-------------------------------------------------------------------------------------------------------------------------------------------------------
+    
+	//start_kernel -->	setup_arch	--> x86_init.paging.pagetable_init --> native_pagetable_init --> paging_init
 
 	x86_init.paging.pagetable_init();
 
@@ -1212,6 +1276,7 @@ void __init setup_arch(char **cmdline_p)
 	generic_apic_probe();
 
 	early_quirks();
+
 
 	/*
 	 * Read APIC and some other early information from ACPI tables.

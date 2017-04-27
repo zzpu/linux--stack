@@ -65,6 +65,17 @@
  * as wide as the result!), and we want to evaluate the macro
  * arguments just once each.
  */
+
+//__typeof__(int *) x; //It   is   equivalent   to  'int  *x';
+//
+//__typeof__(int) a;//It   is   equivalent   to  'int  a';
+//
+//__typeof__(*x)  y;//It   is   equivalent   to  'int y';
+//
+//__typeof__(&a) b;//It   is   equivalent   to  'int  b';
+//
+//__typeof__(__typeof__(int *)[4])   z; //It   is   equivalent   to  'int  *z[4]';
+
 #define __round_mask(x, y) ((__typeof__(x))((y)-1))
 #define round_up(x, y) ((((x)-1) | __round_mask(x, y))+1)
 #define round_down(x, y) ((x) & ~__round_mask(x, y))

@@ -282,11 +282,16 @@ int __init sanitize_e820_map(struct e820entry *biosmap, int max_nr_map,
 	BUG_ON(old_nr > max_nr_map);
 
 	/* bail out if we find any unreasonable addresses in bios map */
+
+	//这里是将e820做一个全面检测，检测是否存在不合理的内存布局信息项，存在不合理项则直接退出
 	for (i = 0; i < old_nr; i++)
 		if (biosmap[i].addr + biosmap[i].size < biosmap[i].addr)
 			return -1;
 
+
 	/* create pointers for initial change-point information (for sorting) */
+
+	//将change_point和change_point_list关联起来，实际上change_point_list只是占用一个栈空间而已，真正起到作用的是change_point	
 	for (i = 0; i < 2 * old_nr; i++)
 		change_point[i] = &change_point_list[i];
 
@@ -790,7 +795,9 @@ static unsigned long __init e820_end_pfn(unsigned long limit_pfn, unsigned type)
 	unsigned long max_arch_pfn = MAX_ARCH_PFN;
 
 	for (i = 0; i < e820->nr_map; i++) {
+		// map 是个 e820entry 数组
 		struct e820entry *ei = &e820->map[i];
+		
 		unsigned long start_pfn;
 		unsigned long end_pfn;
 
@@ -798,6 +805,7 @@ static unsigned long __init e820_end_pfn(unsigned long limit_pfn, unsigned type)
 			continue;
 
 		start_pfn = ei->addr >> PAGE_SHIFT;
+		
 		end_pfn = (ei->addr + ei->size) >> PAGE_SHIFT;
 
 		if (start_pfn >= limit_pfn)
@@ -824,6 +832,7 @@ unsigned long __init e820_end_of_ram_pfn(void)
 
 unsigned long __init e820_end_of_low_ram_pfn(void)
 {
+	// 32 - PAGE_SHIFT = 32 - 12   --> 页框号限制
 	return e820_end_pfn(1UL << (32 - PAGE_SHIFT), E820_RAM);
 }
 
@@ -1116,11 +1125,30 @@ char *__init default_machine_specific_memory_setup(void)
 	 * Otherwise fake a memory map; one section from 0k->640k,
 	 * the next section from 1mb->appropriate_mem_k
 	 */
+
+	//由于历史原因，一些i/o设备也会占据一部分内存物理地址空间，因此系统可以使用的物理内存空间是不连续的，	
+	//系统内存被分成了很多段，每个段的属性也是不一样的。int 0x15 查询物理内存时每次返回一个内存段的信息，	
+	//因此要想返回系统中所有的物理内存，我们必须以迭代的方式去查询。detect_memory_e820()函数把int 0x15放	
+	//到一个do-while循环里，每次得到的一个内存段放到struct e820entry里，而struct e820entry的结构正是e820	
+	//返回结果的结构！而像其它启动时获得的结果一样，最终都会被放到boot_params里，e820被放到了 boot_params.e820_map
+
+
+	//e820是和BIOS的一个中断相关的，具体说是int 0x15。之所以叫e820是因为在用这个中断时ax必须是0xe820。
+
+	// detect_memory --> detect_memory_e820
 	new_nr = boot_params.e820_entries;
+
+	//setup_memory_map -->  default_machine_specific_memory_setup  --> sanitize_e820_map
+
+
+    //对整个表排序 	
 	sanitize_e820_map(boot_params.e820_map,
 			ARRAY_SIZE(boot_params.e820_map),
 			&new_nr);
+	
 	boot_params.e820_entries = new_nr;
+
+	//把整个表拷贝到指定的数据结构
 	if (append_e820_map(boot_params.e820_map, boot_params.e820_entries)
 	  < 0) {
 		u64 mem_size;
@@ -1148,9 +1176,15 @@ void __init setup_memory_map(void)
 {
 	char *who;
 
+	//先是调用了一个钩子函数，然后将e820保存到e820_saved里面，再往下就是print函数
+
+	//setup_memory_map -->  default_machine_specific_memory_setup  --> sanitize_e820_map
+
 	who = x86_init.resources.memory_setup();
 	memcpy(e820_saved, e820, sizeof(struct e820map));
 	printk(KERN_INFO "e820: BIOS-provided physical RAM map:\n");
+
+	//将钩子函数返回的内容打印出来，打印出来的内容可以在shell上面通过dmesg命令查看得到
 	e820_print_map(who);
 }
 

@@ -477,6 +477,10 @@ static inline void permanent_kmaps_init(pgd_t *pgd_base)
 }
 #endif /* CONFIG_HIGHMEM */
 
+// start_kernel()
+//└-> setup_arch()
+//└-> setup_memory_map();
+
 void __init native_pagetable_init(void)
 {
 	unsigned long pfn, va;
@@ -735,7 +739,14 @@ void __init paging_init(void)
 	 */
 	olpc_dt_build_devicetree();
 	sparse_memory_present_with_active_regions(MAX_NUMNODES);
+	
 	sparse_init();
+	
+	//伙伴系统初始化
+	
+	//paging_init() --> zone_sizes_init() --> free_area_init_nodes() --> free_area_init_node() --> free_area_init_core()
+	
+	//--> init_currently_empty_zone() --> zone_init_free_lists()	
 	zone_sizes_init();
 }
 

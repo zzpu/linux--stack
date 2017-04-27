@@ -27,8 +27,15 @@ struct pglist_data __refdata contig_page_data = {
 EXPORT_SYMBOL(contig_page_data);
 #endif
 
+// setup_arch (1124)中初始化
+
+//低内存最大页框号 --> 896
 unsigned long max_low_pfn;
+
+//min_low_pfn	最小的可用pfn
 unsigned long min_low_pfn;
+
+//最大的可用pfn
 unsigned long max_pfn;
 unsigned long long max_possible_pfn;
 

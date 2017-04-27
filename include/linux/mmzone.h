@@ -342,7 +342,7 @@ enum zone_type {
 };
 
 #ifndef __GENERATING_BOUNDS_H
-
+//zone对象用于跟踪诸如页面使用情况的统计数, 空闲区域信息和锁信息
 struct zone {
 	/* Read-mostly fields */
 
@@ -360,12 +360,18 @@ struct zone {
 	 * recalculated at runtime if the sysctl_lowmem_reserve_ratio sysctl
 	 * changes.
 	 */
+	 
+	//为了防止一些代码必须运行在低地址区域，所以事先保留一些低地址区域的内存
 	long lowmem_reserve[MAX_NR_ZONES];
 
 #ifdef CONFIG_NUMA
 	int node;
 #endif
+	//指向这个zone所在的pglist_data对象
 	struct pglist_data	*zone_pgdat;
+
+	//page管理的数据结构对象，内部有一个page的列表(list)来管理。每个CPU维护一个page list，
+	//避免自旋锁的冲突。这个数组的大小和NR_CPUS(CPU的数量）有关，这个值是编译的时候确定的
 	struct per_cpu_pageset __percpu *pageset;
 
 #ifndef CONFIG_SPARSEMEM
@@ -377,6 +383,8 @@ struct zone {
 #endif /* CONFIG_SPARSEMEM */
 
 	/* zone_start_pfn == zone_start_paddr >> PAGE_SHIFT */
+
+	//和node_start_pfn的含义一样。这个成员是用于表示zone中的开始那个page在物理内存中的位置的
 	unsigned long		zone_start_pfn;
 
 	/*
@@ -446,12 +454,23 @@ struct zone {
 	ZONE_PADDING(_pad1_)
 
 	/* free areas of different sizes */
+
+	//页面使用状态的信息，以每个bit标识对应的page是否可以分配
+
+	//是用于伙伴系统的，每个数组元素指向对应阶也表的数组开头
+	//以下是供页帧回收扫描器(page reclaim scanner)访问的字段
+	//scanner会跟据页帧的活动情况对内存域中使用的页进行编目
+	//如果页帧被频繁访问，则是活动的，相反则是不活动的，
+	//在需要换出页帧时，这样的信息是很重要的
 	struct free_area	free_area[MAX_ORDER];
 
 	/* zone flags, see below */
+	//描述当前内存的状态, 参见下面的enum zone_flags结构 
 	unsigned long		flags;
 
 	/* Primarily protects free_area */
+
+	//对zone并发访问的保护的自旋锁
 	spinlock_t		lock;
 
 	/* Write-intensive fields used by compaction and vmstats. */
@@ -491,6 +510,8 @@ struct zone {
 
 	ZONE_PADDING(_pad3_)
 	/* Zone statistics */
+	
+	//Zone statistics 内存域的统计信息, 参见后面的 enum zone_stat_item 结构
 	atomic_long_t		vm_stat[NR_VM_ZONE_STAT_ITEMS];
 } ____cacheline_internodealigned_in_smp;
 
@@ -595,16 +616,28 @@ extern struct page *mem_map;
  */
 struct bootmem_data;
 typedef struct pglist_data {
+	//包含了结点中各内存域的数据结构 , 可能的区域类型用zone_type表示
 	struct zone node_zones[MAX_NR_ZONES];
+
+	//指点了备用结点及其内存域的列表，以便在当前结点没有可用空间时，在备用结点分配内存
 	struct zonelist node_zonelists[MAX_ZONELISTS];
+
+	//保存结点中不同内存域的数目
 	int nr_zones;
 #ifdef CONFIG_FLAT_NODE_MEM_MAP	/* means !SPARSEMEM */
+
+	//指向page实例数组的指针，用于描述结点的所有物理内存页，它包含了结点中所有内存域的页
 	struct page *node_mem_map;
 #ifdef CONFIG_PAGE_EXTENSION
 	struct page_ext *node_page_ext;
 #endif
 #endif
 #ifndef CONFIG_NO_BOOTMEM
+	//在系统启动boot期间，内存管理子系统初始化之前，
+	//内核页需要使用内存（另外，还需要保留部分内存用于初始化内存管理子系统）
+	//为解决这个问题，内核使用了自举内存分配器 
+	//此结构用于这个阶段的内存管理
+
 	struct bootmem_data *bdata;
 #endif
 #ifdef CONFIG_MEMORY_HOTPLUG
@@ -687,6 +720,11 @@ typedef struct pglist_data {
 	 * The target ratio of ACTIVE_ANON to INACTIVE_ANON pages on
 	 * this node's LRU.  Maintained by the pageout code.
 	 */
+
+	//不活动页的比例,
+	//接着是一些很少使用或者大部分情况下是只读的字段：
+	//wait_table wait_table_hash_nr_entries wait_table_bits
+	//形成等待列队，可以等待某一页可供进程使用
 	unsigned int inactive_ratio;
 
 	unsigned long		flags;

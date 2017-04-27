@@ -1218,13 +1218,16 @@ void __init vm_area_register_early(struct vm_struct *vm, size_t align)
 
 	vm_area_add_early(vm);
 }
+// 在内核中一个接口函数vmalloc，申请一片连续的虚拟地址空间，但不保证物理空间连续
 
+//vmalloc申请效率比较低，还会造成TLB抖动. 一般内核里常用kmalloc. 除非特殊需求，比如要获取大块内存时，实例就是当ko模块加载到内核运行时，即需要vmalloc. 
 void __init vmalloc_init(void)
 {
 	struct vmap_area *va;
 	struct vm_struct *tmp;
 	int i;
 
+	//遍历每个CPU
 	for_each_possible_cpu(i) {
 		struct vmap_block_queue *vbq;
 		struct vfree_deferred *p;

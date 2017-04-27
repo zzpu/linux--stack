@@ -5,7 +5,7 @@
 #define __PAGETABLE_PUD_FOLDED
 
 #define PUD_SHIFT			PGDIR_SHIFT
-#define PUD_SIZE			PGDIR_SIZE
+#define PUD_SIZE			PGDIR_SIZE     //22位
 #define PUD_MASK			PGDIR_MASK
 #define PTRS_PER_PUD			1
 
